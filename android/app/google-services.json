@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "881326841035",
+    "project_id": "pest-control-b0140",
+    "storage_bucket": "pest-control-b0140.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:881326841035:android:ef20c98152ce9ff5cd8f4e",
+        "android_client_info": {
+          "package_name": "com.example.pest_control_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "881326841035-k7o8icmu7ppo4pvp2hrkgqlsbnp91psr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDSos9chrWp1Uds8kCv_ZpyOd_ZyoGxuOg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "881326841035-k7o8icmu7ppo4pvp2hrkgqlsbnp91psr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "881326841035-cclsh4p1ggooauuld1g8rtv83m8nevth.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pestControlFlutter"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:881326841035:android:b82f9c9db942b0c5cd8f4e",
+        "android_client_info": {
+          "package_name": "com.pests247.pestServiceControl"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "881326841035-k7o8icmu7ppo4pvp2hrkgqlsbnp91psr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDSos9chrWp1Uds8kCv_ZpyOd_ZyoGxuOg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "881326841035-k7o8icmu7ppo4pvp2hrkgqlsbnp91psr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "881326841035-cclsh4p1ggooauuld1g8rtv83m8nevth.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pestControlFlutter"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
