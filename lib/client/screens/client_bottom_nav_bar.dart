@@ -8,6 +8,7 @@ import 'package:pests247/client/screens/profile/profile_view.dart';
 import 'package:pests247/client/screens/user_chats/chat.dart';
 import 'package:pests247/shared/controllers/app/app_controller.dart';
 import 'home/home.dart';
+import 'business_listings_screen.dart';
 
 class ClientBottomNavBar extends StatefulWidget {
   const ClientBottomNavBar({super.key});
@@ -35,6 +36,7 @@ class _BottomNavBarState extends State<ClientBottomNavBar> {
 
   final List<Widget> _pages = [
     const HomePage(),
+    const ClientBusinessListingsScreen(),
     const Chat(),
     const PostedLeadsScreen(),
     const ClientProfileView(),
