@@ -157,6 +157,7 @@ class ReviewsScreen extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: reviews.length,
                 itemBuilder: (context, index) {
+                  if (index >= reviews.length) return const SizedBox();
                   var review = reviews[index];
                   int rating = review.reviewUserRating?.toInt() ?? 0;
                   return UserReviewCard(review: review, rating: rating);

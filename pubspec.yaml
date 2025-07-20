@@ -76,6 +76,7 @@ dependencies:
   flutter_stripe:
   dio: ^5.7.0
   in_app_purchase:
+  file_picker: ^10.2.0
 #  geolocator:
 
 dev_dependencies:

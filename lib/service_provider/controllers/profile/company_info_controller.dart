@@ -7,6 +7,10 @@ import 'package:pests247/client/widgets/custom_snackbar.dart';
 import 'package:http/http.dart' as http;
 import '../../../client/controllers/user/user_controller.dart';
 import '../../../data/keys.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 
 class CompanyInfoController extends GetxController {
   var companyName = ''.obs;
@@ -20,6 +24,9 @@ class CompanyInfoController extends GetxController {
   var isLoading = false.obs;
   var isChanged = false.obs;
   var locationSuggestions = <String>[].obs;
+  var gigDescription = ''.obs;
+  var gigImage = ''.obs;
+  var certifications = <String>[].obs;
 
 
   late TextEditingController companyNameController;
@@ -45,7 +52,8 @@ class CompanyInfoController extends GetxController {
   }
 
   void setCompanyInfo(String name, String email, String phone, String website,
-      String location, String size, String experience, String description) {
+      String location, String size, String experience, String description, {
+      String gigDesc = '', String gigImg = '', List<String>? certs}) {
     companyNameController.text = name;
     emailController.text = email;
     phoneController.text = phone;
@@ -54,6 +62,9 @@ class CompanyInfoController extends GetxController {
     sizeController.text = size;
     experienceController.text = experience;
     descriptionController.text = description;
+    gigDescription.value = gigDesc;
+    gigImage.value = gigImg;
+    certifications.value = certs ?? [];
 
     companyName.value = name;
     this.email.value = email;
@@ -79,7 +90,10 @@ class CompanyInfoController extends GetxController {
         location.value != (companyInfo?.location ?? '') ||
         size.value != (companyInfo?.size ?? '') ||
         experience.value != (companyInfo?.experience ?? '') ||
-        description.value != (companyInfo?.description ?? '');
+        description.value != (companyInfo?.description ?? '') ||
+        gigDescription.value != (companyInfo?.gigDescription ?? '') ||
+        gigImage.value != (companyInfo?.gigImage ?? '') ||
+        !listEquals(certifications, companyInfo?.certifications ?? []);
   }
 
 
@@ -119,10 +133,61 @@ class CompanyInfoController extends GetxController {
     }
   }
 
+  // For gig image upload
+  Future<void> pickAndUploadGigImage() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
+      if (result != null && result.files.single.path != null) {
+        final file = result.files.single;
+        final filePath = file.path!;
+        final fileBytes = await File(filePath).readAsBytes();
+        final ref = FirebaseStorage.instance.ref().child('gig_images/${file.name}');
+        await ref.putData(fileBytes);
+        final url = await ref.getDownloadURL();
+        gigImage.value = url;
+      }
+    } catch (e) {
+      print('Error uploading gig image: $e');
+      CustomSnackbar.showSnackBar(
+        'Error',
+        'Failed to upload gig image. Please try again.',
+        const Icon(Icons.error, color: Colors.red),
+        Colors.red,
+        Get.context!,
+      );
+    }
+  }
+
+  // For certification upload (allow images and pdf)
+  Future<void> pickAndUploadCertification() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      );
+      if (result != null && result.files.single.path != null) {
+        final file = result.files.single;
+        final filePath = file.path!;
+        final fileBytes = await File(filePath).readAsBytes();
+        final ref = FirebaseStorage.instance.ref().child('certifications/${file.name}');
+        await ref.putData(fileBytes);
+        final url = await ref.getDownloadURL();
+        certifications.value = [...certifications, url];
+      }
+    } catch (e) {
+      print('Error uploading certification: $e');
+      CustomSnackbar.showSnackBar(
+        'Error',
+        'Failed to upload certification. Please try again.',
+        const Icon(Icons.error, color: Colors.red),
+        Colors.red,
+        Get.context!,
+      );
+    }
+  }
 
   Future<void> updateCompanyInfo() async {
-    // Detect changes before proceeding
-
+    // Restrict to one gig per business (enforced by only allowing one companyInfo per user)
     if (!detectChanges) {
       CustomSnackbar.showSnackBar(
         'No Changes',
@@ -131,16 +196,12 @@ class CompanyInfoController extends GetxController {
         Colors.orange,
         Get.context!,
       );
-      return; // Exit if no changes
+      return;
     }
-
     isLoading.value = true;
     try {
-      // Get the current user's ID from the UserController
       UserController userController = Get.find();
       String userId = userController.userModel.value!.uid;
-
-      // Create the company info map
       Map<String, dynamic> companyInfo = {
         'name': companyName.value,
         'emailAddress': email.value,
@@ -151,30 +212,29 @@ class CompanyInfoController extends GetxController {
         'experience': experience.value,
         'description': description.value,
         'logo': '',
+        'gigDescription': gigDescription.value,
+        'gigImage': gigImage.value,
+        'certifications': certifications,
       };
-
-      // Update the company info in the user's document
-      DocumentReference userRef =
-          FirebaseFirestore.instance.collection('users').doc(userId);
-
+      DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(userId);
       await userRef.update({
         'companyInfo': companyInfo,
-        // Update the companyInfo field with the new map
       });
-// Update userModel to reflect changes
-
       await userController.fetchUser();
       setCompanyInfo(
-          companyName.value,
-          email.value,
-          phoneNumber.value,
-          website.value,
-          location.value,
-          size.value,
-          experience.value,
-          description.value);
+        companyName.value,
+        email.value,
+        phoneNumber.value,
+        website.value,
+        location.value,
+        size.value,
+        experience.value,
+        description.value,
+        gigDesc: gigDescription.value,
+        gigImg: gigImage.value,
+        certs: certifications,
+      );
       isLoading.value = false;
-
       CustomSnackbar.showSnackBar(
         'Success',
         'Company profile updated successfully.',
@@ -184,7 +244,6 @@ class CompanyInfoController extends GetxController {
       );
     } catch (e) {
       isLoading.value = false;
-
       CustomSnackbar.showSnackBar(
         'Error',
         'Failed to update company profile. Please try again.',

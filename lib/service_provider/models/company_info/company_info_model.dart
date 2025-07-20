@@ -1,19 +1,21 @@
 class CompanyInfo {
-  final String? name;
-  final String? logo;
-  final String? emailAddress;
-  final String? phoneNumber;
-  final String? website;
-  final String? twitterLink;
-  final String? facebookLink;
-  final String? location;
-  final String? size;
-  final String? experience;
-  final String? description;
-  final List<String>? certifications;
-  final String? certificationStatus;
-  final String? adminComment; // Optional admin comment on rejection
-  final bool isVerified;
+  String? name;
+  String? logo;
+  String? emailAddress;
+  String? phoneNumber;
+  String? website;
+  String? twitterLink;
+  String? facebookLink;
+  String? location;
+  String? size;
+  String? experience;
+  String? description;
+  List<String>? certifications;
+  String? certificationStatus;
+  String? adminComment; // Optional admin comment on rejection
+  bool isVerified;
+  String? gigDescription; // Description for the business gig/listing
+  String? gigImage; // Image for the gig/listing
 
   CompanyInfo({
     this.facebookLink,this.twitterLink,
@@ -30,6 +32,8 @@ class CompanyInfo {
     this.certificationStatus,
     this.adminComment,
     this.isVerified = false,
+    this.gigDescription,
+    this.gigImage,
   });
 
   // Convert CompanyInfo object to a Map for Firestore
@@ -50,6 +54,8 @@ class CompanyInfo {
       'certificationStatus': certificationStatus,
       'adminComment': adminComment,
       'isVerified': isVerified,
+      'gigDescription': gigDescription,
+      'gigImage': gigImage,
     };
   }
 
@@ -71,6 +77,8 @@ class CompanyInfo {
       certificationStatus: map['certificationStatus'] as String?,
       adminComment: map['adminComment'] as String?,
       isVerified: map['isVerified'] ?? false,
+      gigDescription: map['gigDescription'] as String?,
+      gigImage: map['gigImage'] as String?,
     );
   }
 }

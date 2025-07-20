@@ -3,6 +3,10 @@ import 'package:get/get.dart';
 import 'package:pests247/client/controllers/user/user_controller.dart';
 import 'package:pests247/client/widgets/custom_text_field.dart';
 import '../../../../controllers/profile/company_info_controller.dart';
+import '../widgets/profile_image_card.dart';
+import 'dart:io';
+import 'dart:ui';
+import 'package:url_launcher/url_launcher.dart';
 
 class CompanyInfoScreen extends StatelessWidget {
   const CompanyInfoScreen({super.key});
@@ -25,6 +29,8 @@ class CompanyInfoScreen extends StatelessWidget {
       companyInfo?.experience ?? '',
       companyInfo?.description ?? '',
     );
+
+    final TextEditingController gigDescriptionController = TextEditingController(text: companyInfo?.gigDescription ?? '');
 
     return Scaffold(
       appBar: AppBar(
@@ -70,25 +76,12 @@ class CompanyInfoScreen extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.blue.withOpacity(.8),
-                    child: (companyInfo?.logo == null || companyInfo!.logo!.isEmpty)
-                        ? const Icon(
-                      Icons.person,
-                      size: 60,
-                      color: Colors.white,
-                    )
-                        : ClipOval(
-                      child: Image.network(
-                        companyInfo.logo!,
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+                // Fiverr-style business gig card
+                BusinessGigCard(
+                  businessName: companyInfo?.name ?? '',
+                  gigDescription: companyInfo?.gigDescription ?? '',
+                  gigImage: companyInfo?.gigImage ?? '',
+                  isVerified: companyInfo?.isVerified ?? false,
                 ),
                 const SizedBox(height: 30),
 
@@ -252,6 +245,56 @@ class CompanyInfoScreen extends StatelessWidget {
                 // ),
                 const SizedBox(height: 30),
 
+                // Gig Description
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Describe your business gig/listing.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: gigDescriptionController,
+                  onChanged: (value) {
+                    companyInfoController.gigDescription.value = value;
+                  },
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.description),
+                    hintText: 'Enter gig description',
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Gig Image Upload
+                Row(
+                  children: [
+                    companyInfoController.gigImage.value.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              companyInfoController.gigImage.value,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : const Icon(Icons.image, size: 60, color: Colors.grey),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text('Upload Gig Image'),
+                      onPressed: () async {
+                        await companyInfoController.pickAndUploadGigImage();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -282,33 +325,33 @@ class CompanyInfoScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Obx(() {
-                  final certs = companyInfo?.certifications ?? [];
+                  final certs = companyInfoController.certifications;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (certs.isNotEmpty)
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: NeverScrollableScrollPhysics(),
-                          itemCount: certs.length,
-                          itemBuilder: (context, index) {
-                            return ListTile(
-                              leading: Icon(Icons.file_present, color: Colors.blue),
-                              title: Text(certs[index], style: TextStyle(fontSize: 13, color: Colors.blue)),
-                              trailing: IconButton(
-                                icon: Icon(Icons.open_in_new),
-                                onPressed: () {
-                                  // TODO: Open file URL
+                        SizedBox(
+                          height: 120, // Adjust as needed
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: certs.length,
+                            itemBuilder: (context, index) {
+                              return ListTile(
+                                leading: const Icon(Icons.file_present, color: Colors.blue),
+                                title: Text('Certification  ${index + 1}', style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                                onTap: () {
+                                  launchUrl(Uri.parse(certs[index]));
                                 },
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       TextButton.icon(
-                        icon: Icon(Icons.upload_file),
-                        label: Text('Upload Certification'),
-                        onPressed: () {
-                          // TODO: Implement file picker and upload logic
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Upload Certification'),
+                        onPressed: () async {
+                          await companyInfoController.pickAndUploadCertification();
                         },
                       ),
                     ],

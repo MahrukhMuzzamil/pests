@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:pests247/service_provider/controllers/leads/purchased_leads_controller.dart';
 import '../lead_details/lead_details_screen.dart';
 import '../leads/components/widgets/build_lead_card.dart';
+import '../../../../service_provider/models/buyer/buyer_model.dart';
 
 class PurchasedLeadsScreen extends StatelessWidget {
   const PurchasedLeadsScreen({super.key});
@@ -163,16 +164,17 @@ class PurchasedLeadsScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     itemCount: leadsController.filteredLeads.length,
                     itemBuilder: (context, index) {
+                      if (index >= leadsController.filteredLeads.length) return const SizedBox();
                       final lead = leadsController.filteredLeads[index];
                       final currentUserId = FirebaseAuth.instance.currentUser!.uid;
                       final buyer = lead.buyers.firstWhere(
                             (buyer) => buyer.userId == currentUserId,
-                        orElse:  null,
+                        orElse: () => Buyer(userId: '', status: '', activityLogs: [], quotes: []),
                       );
                       final status = buyer.status;
                       return GestureDetector(
                         onTap: () => Get.to(
-                              () => LeadDetailScreen(leadId: lead.leadId,status: status,),
+                              () => LeadDetailScreen(leadId: lead.leadId, status: status,),
                           transition: Transition.cupertino,
                         ),
                         child: LeadCard(

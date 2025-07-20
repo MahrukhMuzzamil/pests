@@ -120,21 +120,17 @@ class ClientProfileView extends StatelessWidget {
                             ),
                             const SizedBox(height: 10),
                             Obx(() {
-                              return homeController.newUpdates.isEmpty
-                                  ? const Text(
-                                'No new updates available.',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w100,
-                                    fontSize: 14),
-                              )
-                                  : ListView.builder(
+                              if (homeController.newUpdates.isEmpty) {
+                                return const Text('No new updates available.', style: TextStyle(fontWeight: FontWeight.w100, fontSize: 14));
+                              }
+                              return ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: homeController.newUpdates.length,
                                 itemBuilder: (context, index) {
+                                  if (index >= homeController.newUpdates.length) return const SizedBox();
                                   final update = homeController.newUpdates[index];
                                   return BuildUpdateTile(update: update);
-
                                 },
                               );
                             }),

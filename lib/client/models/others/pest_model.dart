@@ -7,6 +7,7 @@ class ServiceCategory {
 }
 
 // Example categories for HomeServe 247 (only 'Pest Services' active for now)
+// To rebrand, change 'Pest Services' to another category and update app assets/names.
 final List<ServiceCategory> allCategories = [
   ServiceCategory('Pest Services', 'assets/images/onboard/1.png', isActive: true),
   // ServiceCategory('Cleaning', 'assets/images/onboard/cleaning.png'),
@@ -23,4 +24,7 @@ final List<ServiceCategory> allCategories = [
   // ServiceCategory('Appliance Repair', 'assets/images/onboard/appliance.png'),
   // ServiceCategory('Flooring', 'assets/images/onboard/flooring.png'),
   // ServiceCategory('Window Cleaning', 'assets/images/onboard/windowcleaning.png'),
+  // ServiceCategory('Pool Services', 'assets/images/onboard/pool.png'),
 ];
+// To activate a category, uncomment its line and set isActive: true if needed.
+// For HomeServe 247 rebranding, update the app name and replace assets accordingly.

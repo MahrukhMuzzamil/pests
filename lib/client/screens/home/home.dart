@@ -117,83 +117,30 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                height: MediaQuery.of(context).size.height * .17,
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 1.0,
-                    crossAxisSpacing: 10.0,
-                    mainAxisSpacing: 10.0,
-                  ),
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: homeController.services.length,
-                  itemBuilder: (context, index) {
-                    return imagesContainer(
-                      homeController.services[index].imageURL,
-                      homeController.services[index].name,
-                      index,
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: GestureDetector(
-                  onTap: () {
-                    if (isLoggedIn) {
-                      Get.to(() => LeadFormScreen(), transition: Transition.cupertino);
-                    } else {
-                      CustomSnackbar.showSnackBar(
-                        'You are almost there!',
-                        'Please login to continue',
-                        const Icon(Icons.error),
-                        Theme.of(context).colorScheme.primary,
-                        context,
-                      );
-                      Get.to(() => const StartPage(), transition: Transition.cupertino);
-                    }
-                  },
-                  child: Container(
-                    height: 80,
-                    padding: const EdgeInsets.all(20.0),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue.shade300, Colors.blue.shade500],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              homeController.services.isEmpty
+                ? const Center(child: Text('No services found.'))
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    height: MediaQuery.of(context).size.height * .17,
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 1.0,
+                        crossAxisSpacing: 10.0,
+                        mainAxisSpacing: 10.0,
                       ),
-                      borderRadius: BorderRadius.circular(20.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.shade200,
-                          offset: const Offset(0, 4),
-                          blurRadius: 10.0,
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Icon(Icons.add_circle, color: Colors.white, size: 30),
-                        SizedBox(width: 15),
-                        Text(
-                          'Submit a Lead Request',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Spacer(),
-                        Icon(Icons.arrow_forward, color: Colors.white),
-                      ],
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: homeController.services.length,
+                      itemBuilder: (context, index) {
+                        if (index >= homeController.services.length) return const SizedBox();
+                        return imagesContainer(
+                          homeController.services[index].imageURL,
+                          homeController.services[index].name,
+                          index,
+                        );
+                      },
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
             ],
           ),
         );

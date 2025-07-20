@@ -32,7 +32,7 @@ Widget buildHeader(ThemeData theme, String name, String date, String status, boo
       CircleAvatar(
         backgroundColor: theme.colorScheme.primary,
         child: Text(
-          name.substring(0, 1).toUpperCase(),
+          (name.isNotEmpty ? name.substring(0, 1) : '?').toUpperCase(),
           style: const TextStyle(color: Colors.white),
         ),
       ),

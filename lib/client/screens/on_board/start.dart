@@ -33,6 +33,9 @@ class _StartPageState extends State<StartPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (services.isEmpty) {
+      return const Center(child: Text('No services found.'));
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
@@ -53,6 +56,7 @@ class _StartPageState extends State<StartPage> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: services.length,
                   itemBuilder: (BuildContext context, int index) {
+                    if (index >= services.length) return const SizedBox();
                     return _serviceContainer(
                       services[index].imageURL,
                       services[index].name,
