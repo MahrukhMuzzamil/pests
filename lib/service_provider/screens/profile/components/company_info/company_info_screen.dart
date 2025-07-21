@@ -1,8 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pests247/client/controllers/user/user_controller.dart';
+import 'package:pests247/service_provider/controllers/profile/company_info_controller.dart';
+import 'package:pests247/client/widgets/custom_snackbar.dart';
+import '../../../../../client/widgets/custom_icon_button.dart';
 import 'package:pests247/client/widgets/custom_text_field.dart';
-import '../../../../controllers/profile/company_info_controller.dart';
 import '../widgets/profile_image_card.dart';
 import 'dart:io';
 import 'dart:ui';
@@ -34,36 +37,29 @@ class CompanyInfoScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Edit Company Info',
-          style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-        ),
+        centerTitle: true,
+        title: const Text('Company Info'),
         actions: [
-          Obx(() {
-            return Container(
-              height: 40,
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(.2),
-                  borderRadius: const BorderRadius.all(Radius.circular(25))),
-              child: TextButton(
-                onPressed: companyInfoController.detectChanges
-                    ? () {
-                  companyInfoController.updateCompanyInfo();
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: CustomIconButton(
+              onTap: () async {
+                if (companyInfoController.detectChanges) {
+                  await companyInfoController.updateCompanyInfo();
+                } else {
+                  CustomSnackbar.showSnackBar(
+                    'Info',
+                    'No changes detected.',
+                    const Icon(Icons.info, color: Colors.blue),
+                    Colors.blue,
+                    context,
+                  );
                 }
-                    : null,
-                child: Text(
-                  'Save',
-                  style: TextStyle(
-                    color: companyInfoController.detectChanges
-                        ? Colors.blue
-                        : Colors.grey,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            );
-          }),
+              },
+              icon: Icons.check,
+              color: Colors.blue.withOpacity(0.14),
+            ),
+          )
         ],
       ),
       body: Obx(() {
@@ -76,6 +72,38 @@ class CompanyInfoScreen extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               children: [
+                // Approval Status Card
+                if (companyInfo?.status != null)
+                  Card(
+                    color: companyInfo?.status == 'approved'
+                        ? Colors.green.shade100
+                        : companyInfo?.status == 'rejected'
+                        ? Colors.red.shade100
+                        : Colors.yellow.shade100,
+                    child: ListTile(
+                      leading: Icon(
+                        companyInfo?.status == 'approved'
+                            ? Icons.check_circle
+                            : companyInfo?.status == 'rejected'
+                            ? Icons.cancel
+                            : Icons.hourglass_empty,
+                        color: companyInfo?.status == 'approved'
+                            ? Colors.green
+                            : companyInfo?.status == 'rejected'
+                            ? Colors.red
+                            : Colors.orange,
+                      ),
+                      title: Text(
+                        'Status: ${companyInfo?.status?.capitalizeFirst ?? 'Pending'}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: companyInfo?.status == 'rejected'
+                          ? Text('Reason: ${companyInfo?.rejectionComment ?? 'No reason provided.'}')
+                          : null,
+                    ),
+                  ),
+                const SizedBox(height: 20),
+                
                 // Fiverr-style business gig card
                 BusinessGigCard(
                   businessName: companyInfo?.name ?? '',

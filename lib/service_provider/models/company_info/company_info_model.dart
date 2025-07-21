@@ -16,6 +16,8 @@ class CompanyInfo {
   bool isVerified;
   String? gigDescription; // Description for the business gig/listing
   String? gigImage; // Image for the gig/listing
+  String? status;
+  String? rejectionComment;
 
   CompanyInfo({
     this.facebookLink,this.twitterLink,
@@ -34,6 +36,8 @@ class CompanyInfo {
     this.isVerified = false,
     this.gigDescription,
     this.gigImage,
+    this.status,
+    this.rejectionComment,
   });
 
   // Convert CompanyInfo object to a Map for Firestore
@@ -56,6 +60,8 @@ class CompanyInfo {
       'isVerified': isVerified,
       'gigDescription': gigDescription,
       'gigImage': gigImage,
+      'status': status,
+      'rejectionComment': rejectionComment,
     };
   }
 
@@ -79,6 +85,8 @@ class CompanyInfo {
       isVerified: map['isVerified'] ?? false,
       gigDescription: map['gigDescription'] as String?,
       gigImage: map['gigImage'] as String?,
+      status: map['status'] as String?,
+      rejectionComment: map['rejectionComment'] as String?,
     );
   }
 }
