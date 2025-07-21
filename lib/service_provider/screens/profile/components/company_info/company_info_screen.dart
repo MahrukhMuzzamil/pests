@@ -246,118 +246,142 @@ class CompanyInfoScreen extends StatelessWidget {
                 const SizedBox(height: 30),
 
                 // Gig Description
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Describe your business gig/listing.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: gigDescriptionController,
-                  onChanged: (value) {
-                    companyInfoController.gigDescription.value = value;
-                  },
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.description),
-                    hintText: 'Enter gig description',
-                  ),
-                ),
+                // const Align(
+                //   alignment: Alignment.centerLeft,
+                //   child: Text(
+                //     'Describe your business gig/listing.',
+                //     style: TextStyle(fontSize: 14, color: Colors.grey),
+                //   ),
+                // ),
+                // const SizedBox(height: 10),
+                // TextField(
+                //   controller: gigDescriptionController,
+                //   onChanged: (value) {
+                //     companyInfoController.gigDescription.value = value;
+                //   },
+                //   minLines: 2,
+                //   maxLines: 4,
+                //   decoration: const InputDecoration(
+                //     border: OutlineInputBorder(),
+                //     prefixIcon: Icon(Icons.description),
+                //     hintText: 'Enter gig description',
+                //   ),
+                // ),
                 const SizedBox(height: 20),
 
                 // Gig Image Upload
-                Row(
-                  children: [
-                    companyInfoController.gigImage.value.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              companyInfoController.gigImage.value,
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        : const Icon(Icons.image, size: 60, color: Colors.grey),
-                    const SizedBox(width: 16),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.upload_file),
-                      label: const Text('Upload Gig Image'),
-                      onPressed: () async {
-                        await companyInfoController.pickAndUploadGigImage();
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
+                // Row(
+                //   children: [
+                //     companyInfoController.gigImage.value.isNotEmpty
+                //         ? ClipRRect(
+                //             borderRadius: BorderRadius.circular(8),
+                //             child: Image.network(
+                //               companyInfoController.gigImage.value,
+                //               width: 60,
+                //               height: 60,
+                //               fit: BoxFit.cover,
+                //             ),
+                //           )
+                //         : const Icon(Icons.image, size: 60, color: Colors.grey),
+                //     const SizedBox(width: 16),
+                //     ElevatedButton.icon(
+                //       icon: const Icon(Icons.upload_file),
+                //       label: const Text('Upload Gig Image'),
+                //       onPressed: () async {
+                //         await companyInfoController.pickAndUploadGigImage();
+                //       },
+                //     ),
+                //   ],
+                // ),
 
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Brief description of your company.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                buildTextField(
-                  minLines: 7,
-                  controller: companyInfoController.descriptionController,
-                  onChanged: (value) {
-                    companyInfoController.description.value = value;
-                  },
-                  labelText: '',
-                  prefixIcon: Icons.description,
-                ),
-                const SizedBox(height: 30),
-
-                // Certification Upload Section
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Upload your business certifications (PDF, image, etc.)',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 40),
                 Obx(() {
-                  final certs = companyInfoController.certifications;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (certs.isNotEmpty)
-                        SizedBox(
-                          height: 120, // Adjust as needed
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: certs.length,
-                            itemBuilder: (context, index) {
-                              return ListTile(
-                                leading: const Icon(Icons.file_present, color: Colors.blue),
-                                title: Text('Certification  ${index + 1}', style: const TextStyle(fontSize: 13, color: Colors.blue)),
-                                onTap: () {
-                                  launchUrl(Uri.parse(certs[index]));
+                  return companyInfoController.isLoading.value
+                      ? const Center(
+                        child: CircularProgressIndicator(strokeWidth: 6),
+                      )
+                      : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 26.0, vertical: 20),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              // Fiverr-style business gig card
+                              BusinessGigCard(
+                                businessName: companyInfo?.name ?? '',
+                                gigDescription: companyInfo?.gigDescription ?? '',
+                                gigImage: companyInfo?.gigImage ?? '',
+                                isVerified: companyInfo?.isVerified ?? false,
+                              ),
+                              const SizedBox(height: 30),
+
+                              const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Brief description of your company.',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              buildTextField(
+                                minLines: 7,
+                                controller: companyInfoController.descriptionController,
+                                onChanged: (value) {
+                                  companyInfoController.description.value = value;
                                 },
-                              );
-                            },
+                                labelText: '',
+                                prefixIcon: Icons.description,
+                              ),
+                              const SizedBox(height: 30),
+
+                              // Certification Upload Section
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Upload your business certifications (PDF, image, etc.)',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Obx(() {
+                                final certs = companyInfoController.certifications;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (certs.isNotEmpty)
+                                      SizedBox(
+                                        height: 120, // Adjust as needed
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          physics: const NeverScrollableScrollPhysics(),
+                                          itemCount: certs.length,
+                                          itemBuilder: (context, index) {
+                                            return ListTile(
+                                              leading: const Icon(Icons.file_present, color: Colors.blue),
+                                              title: Text('Certification  ${index + 1}', style: const TextStyle(fontSize: 13, color: Colors.blue)),
+                                              onTap: () {
+                                                launchUrl(Uri.parse(certs[index]));
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.upload_file),
+                                      label: const Text('Upload Certification'),
+                                      onPressed: () async {
+                                        await companyInfoController.pickAndUploadCertification();
+                                      },
+                                    ),
+                                  ],
+                                );
+                              }),
+                              const SizedBox(height: 50),
+                            ],
                           ),
                         ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('Upload Certification'),
-                        onPressed: () async {
-                          await companyInfoController.pickAndUploadCertification();
-                        },
-                      ),
-                    ],
-                  );
+                      );
                 }),
-                const SizedBox(height: 50),
               ],
             ),
           ),

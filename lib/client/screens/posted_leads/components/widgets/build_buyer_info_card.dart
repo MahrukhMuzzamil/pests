@@ -97,6 +97,7 @@ Widget buildBuyerInfoCard(
                 onPressed: () {
                   Get.to(
                           () => CompanyProfileCard(
+                          userId: buyerUser.uid,
                           companyInfo: buyerUser.companyInfo,
                           reviews: buyerUser.reviews!,
                           questionAnswerForm: buyerUser.questionAnswerForm!),

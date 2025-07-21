@@ -21,8 +21,8 @@ class ClientProfileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final homeController = Get.put(HomeController());
-    UserController userController = Get.find();
-
+    final userController = Get.put(UserController());
+    final user = userController.userModel.value!;
     return Scaffold(
       backgroundColor: Colors.blue.withOpacity(1),
       appBar: AppBar(
@@ -46,6 +46,11 @@ class ClientProfileView extends StatelessWidget {
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
+              ProfileImageCard(
+                profilePicUrl: user.profilePicUrl,
+                name: user.userName,
+                email: user.email,
+              ),
               Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -145,9 +150,6 @@ class ClientProfileView extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              ClientProfileImageCard(
-                image: userController.userModel.value?.profilePicUrl ?? '',
               ),
             ],
           ),

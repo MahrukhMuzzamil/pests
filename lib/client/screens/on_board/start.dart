@@ -109,6 +109,7 @@ class _StartPageState extends State<StartPage> {
                     isLoading: false,
                     tag: 'ButtonL O G I N',
                   ),
+                
                   const SizedBox(height: 10),
                   CustomButton(
                     text: 'S I G N U P',

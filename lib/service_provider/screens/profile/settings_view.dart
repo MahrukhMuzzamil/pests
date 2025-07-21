@@ -12,6 +12,7 @@ import 'package:pests247/service_provider/screens/profile/components/support/sup
 import '../../../client/widgets/custom_icon_button.dart';
 import 'components/communication/email_template_screen.dart';
 import 'components/communication/sms_template_screen.dart';
+import 'components/gigs/manage_gigs_screen.dart';
 import 'components/widgets/setting_tile.dart';
 
 class SettingsView extends StatefulWidget {
@@ -130,6 +131,16 @@ class _SettingsViewState extends State<SettingsView> {
               subtitle: 'Set up your company social media',
               onTap: () {
                 Get.to(() => const SocialMediaLinksScreen(),
+                    transition: Transition.cupertino);
+              },
+            ),
+
+            SettingTile(
+              leadingIcon: const Icon(Icons.work),
+              title: 'Manage Gigs',
+              subtitle: 'Create and manage your service gigs',
+              onTap: () {
+                Get.to(() => const ManageGigsScreen(),
                     transition: Transition.cupertino);
               },
             ),

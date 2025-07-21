@@ -11,16 +11,16 @@ class PostedLeadsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final postedLeadsController = Get.put(PostedLeadsController());
-    if(postedLeadsController.postedLeads.isEmpty)
-      {
-        print('Fetched Posted Leads');
-        postedLeadsController.fetchPostedLeads();
-      }
+    postedLeadsController.fetchPostedLeads();
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Posted Leads', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            ),
             Expanded(
               child: Obx(() {
                 if (postedLeadsController.isLoading.value) {

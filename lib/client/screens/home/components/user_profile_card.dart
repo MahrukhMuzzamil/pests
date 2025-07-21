@@ -35,6 +35,7 @@ class UserProfileCard extends StatelessWidget {
         onTap: () {
           Get.to(
               () => CompanyProfileCard(
+                    userId: highestRatedUser!.uid,
                     reviews: highestRatedUser!.reviews,
                     questionAnswerForm: highestRatedUser!.questionAnswerForm,
                     companyInfo: highestRatedUser!.companyInfo,
