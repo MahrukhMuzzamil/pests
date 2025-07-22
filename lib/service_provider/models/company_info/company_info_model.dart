@@ -16,6 +16,8 @@ class CompanyInfo {
   bool isVerified;
   String? gigDescription; // Description for the business gig/listing
   String? gigImage; // Image for the gig/listing
+  String? status;
+  String? rejectionComment;
   double? averageRating;
   double? latitude;
   double? longitude;
@@ -40,6 +42,8 @@ class CompanyInfo {
     this.isVerified = false,
     this.gigDescription,
     this.gigImage,
+    this.status,
+    this.rejectionComment,
     this.averageRating,
     this.latitude,
     this.longitude,
@@ -105,6 +109,8 @@ class CompanyInfo {
       'premiumPackage': premiumPackage,
       'rankScore': rankScore,
       'distanceFromUser': distanceFromUser
+      'status': status,
+      'rejectionComment': rejectionComment,
     };
   }
 
@@ -134,6 +140,8 @@ class CompanyInfo {
       premiumPackage: map['premiumPackage'] ?? 0,
       rankScore: map['rankScore'] as double?,
       distanceFromUser: map['distanceFromUser'] as double?
+      status: map['status'] as String?,
+      rejectionComment: map['rejectionComment'] as String?,
     );
   }
 }

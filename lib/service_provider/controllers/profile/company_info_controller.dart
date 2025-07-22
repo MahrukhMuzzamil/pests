@@ -235,6 +235,8 @@ class CompanyInfoController extends GetxController {
         'gigDescription': gigDescription.value,
         'gigImage': gigImage.value,
         'certifications': certifications,
+        'status': 'pending', // Set status to pending on update
+        'rejectionComment': null, // Clear rejection comment on update
         'averageRating': existingAverageRating, // <-- preserve
       };
       Position? position;
