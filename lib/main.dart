@@ -9,6 +9,7 @@ import 'client/screens/client_bottom_nav_bar.dart';
 import 'client/widgets/colors.dart';
 import 'firebase_options.dart';
 import 'service_provider/screens/service_provider_bottom_nav_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,9 @@ void main() async {
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
+
+    // BACKFILL: Update averageRating, latitude, and longitude for all service providers
+    //await backfillCompanyInfo();
 
     await Keys.loadAllKeys();
 
@@ -25,6 +29,44 @@ void main() async {
     runApp(MyApp(isLoggedIn: isLoggedIn));
   } catch (e) {
     print('Error initializing Firebase: $e');
+  }
+}
+
+Future<void> backfillCompanyInfo() async {
+  final firestore = FirebaseFirestore.instance;
+  final usersSnapshot = await firestore
+      .collection('users')
+      .where('accountType', isEqualTo: 'serviceProvider')
+      .get();
+
+  for (var doc in usersSnapshot.docs) {
+    final data = doc.data();
+    final reviews = data['reviews'] as List<dynamic>? ?? [];
+    final companyInfo = data['companyInfo'] as Map<String, dynamic>?;
+    if (companyInfo == null) continue;
+
+    // Calculate averageRating
+    double avg = 0.0;
+    if (reviews.isNotEmpty) {
+      final total = reviews
+          .map((r) => (r['reviewUserRating'] ?? 0).toDouble())
+          .fold(0.0, (a, b) => a + b);
+      avg = total / reviews.length;
+    }
+
+    // Get latitude/longitude if present
+    final lat = companyInfo['latitude'];
+    final lon = companyInfo['longitude'];
+
+    // Only update if at least one value is present
+    if (avg > 0 || (lat != null && lon != null)) {
+      final updateMap = <String, dynamic>{};
+      if (avg > 0) updateMap['companyInfo.averageRating'] = avg;
+      if (lat != null) updateMap['companyInfo.latitude'] = lat;
+      if (lon != null) updateMap['companyInfo.longitude'] = lon;
+      await doc.reference.update(updateMap);
+      print('✅ Updated ${doc.id} with averageRating $avg, lat $lat, lon $lon');
+    }
   }
 }
 

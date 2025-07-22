@@ -204,46 +204,65 @@ class HomeController extends GetxController {
 
     Future<Position?> getCurrentLocation() async 
     {
+      print('[HomeController] getCurrentLocation called');
       try {
         bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-        if (!serviceEnabled) return null;
+        if (!serviceEnabled) {
+          print('[HomeController] Location services are disabled.');
+          return null;
+        }
 
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
+          print('[HomeController] Location permission denied, requesting...');
           permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) return null;
+          if (permission == LocationPermission.denied) {
+            print('[HomeController] Location permission denied after request.');
+            return null;
+          }
         }
 
-        if (permission == LocationPermission.deniedForever) return null;
+        if (permission == LocationPermission.deniedForever) {
+          print('[HomeController] Location permission denied forever.');
+          return null;
+        }
 
-        return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        print('[HomeController] Got position: ${pos.latitude}, ${pos.longitude}');
+        return pos;
       } catch (e) {
-        print('Error getting location: $e');
+        print('[HomeController] Error getting location: $e');
         return null;
       }
     }
 
     Future<bool> requestLocationPermission() async 
     {
+      print('[HomeController] Requesting location permission...');
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
+        print('[HomeController] Location services are disabled.');
         // Optionally prompt user to enable location services.
         return false;
       }
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        print('[HomeController] Location permission denied, requesting...');
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
+          print('[HomeController] Location permission denied after request.');
           return false;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
+        print('[HomeController] Location permission denied forever.');
         // Permissions are permanently denied
         return false;
       }
 
+      print('[HomeController] Location permission granted.');
       return true;
     }
 

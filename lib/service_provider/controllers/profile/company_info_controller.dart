@@ -58,12 +58,13 @@ class CompanyInfoController extends GetxController {
 
   Future<void> _tryGetLocation() async {
     isLocationLoading.value = true;
+    print('[CompanyInfoController] Requesting location permission...');
     Position? position = await getCurrentLocation();
     if (position != null) {
+      print('[CompanyInfoController] Location permission granted: ${position.latitude}, ${position.longitude}');
       locationPermissionGranted.value = true;
-      // Optionally, auto-fill a location field for display
-      // e.g., locationController.text = "${position.latitude}, ${position.longitude}";
     } else {
+      print('[CompanyInfoController] Location permission denied or unavailable.');
       locationPermissionGranted.value = false;
     }
     isLocationLoading.value = false;
@@ -306,16 +307,29 @@ class CompanyInfoController extends GetxController {
   }
 
   Future<Position?> getCurrentLocation() async {
+    print('[CompanyInfoController] getCurrentLocation called');
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return null;
+    if (!serviceEnabled) {
+      print('[CompanyInfoController] Location services are disabled.');
+      return null;
+    }
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
+      print('[CompanyInfoController] Location permission denied, requesting...');
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return null;
+      if (permission == LocationPermission.denied) {
+        print('[CompanyInfoController] Location permission denied after request.');
+        return null;
+      }
     }
-    if (permission == LocationPermission.deniedForever) return null;
+    if (permission == LocationPermission.deniedForever) {
+      print('[CompanyInfoController] Location permission denied forever.');
+      return null;
+    }
 
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    Position pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    print('[CompanyInfoController] Got position: ${pos.latitude}, ${pos.longitude}');
+    return pos;
   }
 }

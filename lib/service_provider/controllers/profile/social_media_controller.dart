@@ -63,20 +63,14 @@ class SocialMediaController extends GetxController {
 
     if (isChanged) {
       try {
-        Map<String, dynamic> companyInfo = {
-          'name': this.companyInfo?.name ?? '',
-          'emailAddress': this.companyInfo?.emailAddress ?? '',
-          'phoneNumber': this.companyInfo?.phoneNumber ?? '',
-          'website': links.value.isNotEmpty ? links.value : '',
-          'location': this.companyInfo?.location ?? '',
-          'size': this.companyInfo?.size ?? '',
-          'experience': this.companyInfo?.experience ?? '',
-          'description': this.companyInfo?.description ?? '',
-          'logo': '',
-          'twitterLink': twitter.value.isNotEmpty ? twitter.value : '',
-          'facebookLink': facebook.value.isNotEmpty ? facebook.value : '',
-        };
-
+        // Get all existing fields from companyInfo and update only the changed ones
+        final existing = this.companyInfo;
+        // Use toMap() if available for consistency
+        Map<String, dynamic> companyInfo = existing != null ? existing.toMap() : {};
+        // Update only the social media fields
+        companyInfo['website'] = links.value.isNotEmpty ? links.value : (existing?.website ?? '');
+        companyInfo['twitterLink'] = twitter.value.isNotEmpty ? twitter.value : (existing?.twitterLink ?? '');
+        companyInfo['facebookLink'] = facebook.value.isNotEmpty ? facebook.value : (existing?.facebookLink ?? '');
 
         // Update the company info in the user's document
         DocumentReference userRef = FirebaseFirestore.instance
@@ -85,7 +79,6 @@ class SocialMediaController extends GetxController {
 
         await userRef.update({
           'companyInfo': companyInfo,
-          // Update the companyInfo field with the new map
         });
         await userController.fetchUser();
         setSocialMediaInfo(
