@@ -1,4 +1,5 @@
-git commit -m "Fix: certification upload, UI, and Firebase Storage issues"name: pests247
+#git commit -m "Fix: certification upload, UI, and Firebase Storage issues"
+name: pests247
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -77,7 +78,7 @@ dependencies:
   dio: ^5.7.0
   in_app_purchase:
   file_picker: ^10.2.0
-#  geolocator:
+  geolocator:
 
 dev_dependencies:
   flutter_test:

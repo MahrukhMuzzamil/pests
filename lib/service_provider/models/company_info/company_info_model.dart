@@ -16,6 +16,12 @@ class CompanyInfo {
   bool isVerified;
   String? gigDescription; // Description for the business gig/listing
   String? gigImage; // Image for the gig/listing
+  double? averageRating;
+  double? latitude;
+  double? longitude;
+  int premiumPackage;
+  double? rankScore;
+  double? distanceFromUser;
 
   CompanyInfo({
     this.facebookLink,this.twitterLink,
@@ -34,7 +40,44 @@ class CompanyInfo {
     this.isVerified = false,
     this.gigDescription,
     this.gigImage,
+    this.averageRating,
+    this.latitude,
+    this.longitude,
+    this.premiumPackage = 0,
+    this.rankScore,
+    this.distanceFromUser
   });
+
+    CompanyInfo copyWith({
+    double? rankScore,
+    double? distanceFromUser
+  }) {
+    return CompanyInfo(
+      facebookLink: this.facebookLink,
+      twitterLink: this.twitterLink,
+      name: this.name,
+      logo: this.logo,
+      emailAddress: this.emailAddress,
+      phoneNumber: this.phoneNumber,
+      website: this.website,
+      location: this.location,
+      size: this.size,
+      experience: this.experience,
+      description: this.description,
+      certifications: this.certifications,
+      certificationStatus: this.certificationStatus,
+      adminComment: this.adminComment,
+      isVerified: this.isVerified,
+      gigDescription: this.gigDescription,
+      gigImage: this.gigImage,
+      averageRating: this.averageRating,
+      latitude: this.latitude,
+      longitude: this.longitude,
+      premiumPackage: this.premiumPackage,
+      rankScore: rankScore ?? this.rankScore,
+      distanceFromUser: distanceFromUser?? this.distanceFromUser
+    );
+  }
 
   // Convert CompanyInfo object to a Map for Firestore
   Map<String, dynamic> toMap() {
@@ -56,6 +99,12 @@ class CompanyInfo {
       'isVerified': isVerified,
       'gigDescription': gigDescription,
       'gigImage': gigImage,
+      'averageRating': averageRating,
+      'latitude': latitude,
+      'longitude': longitude,
+      'premiumPackage': premiumPackage,
+      'rankScore': rankScore,
+      'distanceFromUser': distanceFromUser
     };
   }
 
@@ -79,6 +128,12 @@ class CompanyInfo {
       isVerified: map['isVerified'] ?? false,
       gigDescription: map['gigDescription'] as String?,
       gigImage: map['gigImage'] as String?,
+      averageRating: map['averageRating'] as double?,
+      latitude: map['latitude'] as double?,
+      longitude: map['longitude'] as double?,
+      premiumPackage: map['premiumPackage'] ?? 0,
+      rankScore: map['rankScore'] as double?,
+      distanceFromUser: map['distanceFromUser'] as double?
     );
   }
 }

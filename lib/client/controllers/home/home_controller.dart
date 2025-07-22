@@ -10,6 +10,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/others/pest_model.dart';
 import '../../../shared/models/user/user_model.dart';
 import '../../screens/on_board/start.dart';
+import 'package:pests247/service_provider/models/company_info/company_info_model.dart';
+import 'package:pests247/shared/utils/distance_utils.dart'; // import your utility
+import 'package:geolocator/geolocator.dart';
 
 class HomeController extends GetxController {
   UserModel? highestRatedUser;
@@ -139,4 +142,111 @@ class HomeController extends GetxController {
       }
     }
   }
+
+  Future<List<CompanyInfo>> getRankedBusinesses(List<CompanyInfo> businesses, double userLat, double userLng) async 
+  {
+
+    List<CompanyInfo> scoredCompanies = [];
+
+    for (var company in businesses) {
+      // Handle null values
+      double rating = company.averageRating ?? 0.0;
+      int package = company.premiumPackage;
+      double? distance;
+
+      if (company.latitude != null && company.longitude != null) {
+        distance = haversine(userLat, userLng, company.latitude!, company.longitude!);
+      }
+
+      // Calculate rankScore
+      double rankScore = 0.0;
+
+      // Base score from rating and package (always available)
+      rankScore += rating * 2;          // weight for rating
+      rankScore += package * 5;         // weight for package
+
+      // If location is available, factor proximity in score
+      if (distance != null) {
+        rankScore += (10 - (distance / 5)).clamp(0, 10); // Higher proximity = higher score
+      }
+
+      // Add distance info for UI
+      company = company.copyWith(
+        distanceFromUser: distance,
+        rankScore: rankScore,
+      );
+
+      scoredCompanies.add(company);
+    }
+
+    // Group by package
+    List<CompanyInfo> package1 = scoredCompanies.where((c) => c.premiumPackage == 1).toList();
+    List<CompanyInfo> package2 = scoredCompanies.where((c) => c.premiumPackage == 2).toList();
+    List<CompanyInfo> package3 = scoredCompanies.where((c) => c.premiumPackage == 3).toList();
+    List<CompanyInfo> package0 = scoredCompanies.where((c) => c.premiumPackage == 0).toList();
+
+    // Sort each group by rankScore descending
+    package1.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package2.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package3.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package0.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+
+    // Respect priority
+    List<CompanyInfo> finalRanked = [];
+    finalRanked.addAll(package1.take(5));       // Top 5 from package 1
+    finalRanked.addAll(package2.take(10));      // Top 10 from package 2
+    finalRanked.addAll(package3.take(20));      // Top 20 from package 3
+    finalRanked.addAll(package0);               // Add rest (no premium)
+
+    return finalRanked;
+}
+
+
+    Future<Position?> getCurrentLocation() async 
+    {
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) return null;
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) return null;
+        }
+
+        if (permission == LocationPermission.deniedForever) return null;
+
+        return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      } catch (e) {
+        print('Error getting location: $e');
+        return null;
+      }
+    }
+
+    Future<bool> requestLocationPermission() async 
+    {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        // Optionally prompt user to enable location services.
+        return false;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return false;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        // Permissions are permanently denied
+        return false;
+      }
+
+      return true;
+    }
+
+
+
 }

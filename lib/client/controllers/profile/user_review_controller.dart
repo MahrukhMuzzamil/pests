@@ -86,7 +86,19 @@ class ClientReviewController extends GetxController {
           currentReviews.add(newReview.toMap());
         }
 
-        transaction.update(serviceProviderRef, {'reviews': currentReviews});
+        // Calculate new average rating
+        double avgRating = 0.0;
+        if (currentReviews.isNotEmpty) {
+          avgRating = currentReviews
+              .map((r) => (r['reviewUserRating'] ?? 0).toDouble())
+              .fold(0.0, (a, b) => a + b) / currentReviews.length;
+        }
+
+        // Update both reviews and companyInfo.averageRating atomically
+        transaction.update(serviceProviderRef, {
+          'reviews': currentReviews,
+          'companyInfo.averageRating': avgRating,
+        });
       });
 
       review.value = newReview;

@@ -11,6 +11,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'package:geolocator/geolocator.dart';
+import 'package:pests247/service_provider/controllers/leads/leads_controller.dart';
 
 class CompanyInfoController extends GetxController {
   var companyName = ''.obs;
@@ -27,6 +29,8 @@ class CompanyInfoController extends GetxController {
   var gigDescription = ''.obs;
   var gigImage = ''.obs;
   var certifications = <String>[].obs;
+  var locationPermissionGranted = false.obs;
+  var isLocationLoading = false.obs;
 
 
   late TextEditingController companyNameController;
@@ -49,6 +53,20 @@ class CompanyInfoController extends GetxController {
     sizeController = TextEditingController();
     experienceController = TextEditingController();
     descriptionController = TextEditingController();
+    _tryGetLocation();
+  }
+
+  Future<void> _tryGetLocation() async {
+    isLocationLoading.value = true;
+    Position? position = await getCurrentLocation();
+    if (position != null) {
+      locationPermissionGranted.value = true;
+      // Optionally, auto-fill a location field for display
+      // e.g., locationController.text = "${position.latitude}, ${position.longitude}";
+    } else {
+      locationPermissionGranted.value = false;
+    }
+    isLocationLoading.value = false;
   }
 
   void setCompanyInfo(String name, String email, String phone, String website,
@@ -202,6 +220,8 @@ class CompanyInfoController extends GetxController {
     try {
       UserController userController = Get.find();
       String userId = userController.userModel.value!.uid;
+      // Preserve existing averageRating if present
+      double? existingAverageRating = userController.userModel.value?.companyInfo?.averageRating;
       Map<String, dynamic> companyInfo = {
         'name': companyName.value,
         'emailAddress': email.value,
@@ -215,7 +235,23 @@ class CompanyInfoController extends GetxController {
         'gigDescription': gigDescription.value,
         'gigImage': gigImage.value,
         'certifications': certifications,
+        'averageRating': existingAverageRating, // <-- preserve
       };
+      Position? position;
+      if (locationPermissionGranted.value) {
+        position = await getCurrentLocation();
+      } else if (locationController.text.isNotEmpty) {
+        final leadsController = LeadsController();
+        final coords = await leadsController.getCoordinatesFromPostalCode(locationController.text);
+        if (coords != null) {
+          companyInfo['latitude'] = coords['lat'];
+          companyInfo['longitude'] = coords['lon'];
+        }
+      }
+      if (position != null) {
+        companyInfo['latitude'] = position.latitude;
+        companyInfo['longitude'] = position.longitude;
+      }
       DocumentReference userRef = FirebaseFirestore.instance.collection('users').doc(userId);
       await userRef.update({
         'companyInfo': companyInfo,
@@ -265,5 +301,19 @@ class CompanyInfoController extends GetxController {
     experienceController.dispose();
     descriptionController.dispose();
     super.onClose();
+  }
+
+  Future<Position?> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return null;
+    }
+    if (permission == LocationPermission.deniedForever) return null;
+
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
   }
 }

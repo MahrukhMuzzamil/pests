@@ -171,39 +171,29 @@ class CompanyInfoScreen extends StatelessWidget {
                 // ),
                 // const SizedBox(height: 10),
 
-                // Obx(() {
-                //   return Column(
-                //     children: [
-                //       buildTextField(
-                //         controller: companyInfoController.locationController,
-                //         onChanged: (value) {
-                //           companyInfoController.location.value = value;
-                //           companyInfoController.searchLocations(value);
-                //         },
-                //         labelText: '',
-                //         prefixIcon: Icons.location_on,
-                //       ),
-                //       if (companyInfoController.locationSuggestions.isNotEmpty)
-                //         ListView.builder(
-                //           shrinkWrap: true,
-                //           itemCount: companyInfoController.locationSuggestions.length,
-                //           itemBuilder: (context, index) {
-                //             return Card(
-                //               color: Colors.white,
-                //               child: ListTile(
-                //                 title: Text(companyInfoController.locationSuggestions[index]),
-                //                 onTap: () {
-                //                   companyInfoController.location.value = companyInfoController.locationSuggestions[index];
-                //                   companyInfoController.locationController.text = companyInfoController.locationSuggestions[index];
-                //                   companyInfoController.locationSuggestions.clear(); // Clear suggestions after selection
-                //                 },
-                //               ),
-                //             );
-                //           },
-                //         ),
-                //     ],
-                //   );
-                // }),
+                Obx(() {
+                  if (companyInfoController.locationPermissionGranted.value) {
+                    return const Text(
+                      "Location auto-detected and will be used for your business profile.",
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    );
+                  } else {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Location permission denied. Please enter your location manually:"),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: companyInfoController.locationController,
+                          decoration: const InputDecoration(
+                            labelText: "Enter your address or postal code",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                }),
 
                 // const SizedBox(height: 30),
 
