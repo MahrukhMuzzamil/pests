@@ -108,7 +108,7 @@ class CompanyInfo {
       'longitude': longitude,
       'premiumPackage': premiumPackage,
       'rankScore': rankScore,
-      'distanceFromUser': distanceFromUser
+      'distanceFromUser': distanceFromUser,
       'status': status,
       'rejectionComment': rejectionComment,
     };
@@ -139,7 +139,7 @@ class CompanyInfo {
       longitude: map['longitude'] as double?,
       premiumPackage: map['premiumPackage'] ?? 0,
       rankScore: map['rankScore'] as double?,
-      distanceFromUser: map['distanceFromUser'] as double?
+      distanceFromUser: map['distanceFromUser'] as double?,
       status: map['status'] as String?,
       rejectionComment: map['rejectionComment'] as String?,
     );
