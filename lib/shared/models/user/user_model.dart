@@ -27,6 +27,10 @@ class UserModel {
   QuestionAnswerForm? questionAnswerForm;
   List<Map<String, dynamic>>? leadLocations;
 
+  String? visibilityPackage;
+  String? visibilityPackageName;
+  dynamic visibilityPackageExpiry;
+
   List<CreditHistoryModel>? creditHistoryList;
 
   UserModel({
@@ -49,6 +53,9 @@ class UserModel {
     required this.lastSeen,
     this.emailTemplate,
     this.smsTemplate,
+    this.visibilityPackage,
+    this.visibilityPackageName,
+    this.visibilityPackageExpiry,
     this.creditHistoryList,
   });
 
@@ -73,6 +80,9 @@ class UserModel {
       'smsTemplate': smsTemplate,
       'cardExpiry': cardExpiry,
       'cardNumber': cardNumber,
+      'visibilityPackage': visibilityPackage,
+      'visibilityPackageName': visibilityPackageName,
+      'visibilityPackageExpiry': visibilityPackageExpiry,
       'creditHistoryList': creditHistoryList?.map((credit) => credit.toMap()).toList(),
     };
   }
@@ -109,6 +119,9 @@ class UserModel {
           : DateTime.parse(json['lastSeen']),
       emailTemplate: json['emailTemplate'],
       smsTemplate: json['smsTemplate'],
+      visibilityPackage: json['visibilityPackage'],
+      visibilityPackageName: json['visibilityPackageName'],
+      visibilityPackageExpiry: json['visibilityPackageExpiry'],
       creditHistoryList: (json['creditHistoryList'] as List<dynamic>?)
           ?.map((item) => CreditHistoryModel.fromMap(item))
           .toList(),

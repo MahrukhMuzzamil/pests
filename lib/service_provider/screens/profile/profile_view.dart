@@ -12,6 +12,12 @@ import 'components/about/user_info_screen.dart';
 import 'components/widgets/profile_image_card.dart';
 import 'package:pests247/service_provider/services/package_service.dart';
 import 'package:pests247/shared/models/package/package.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:pests247/services/stripe_service.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -76,6 +82,29 @@ class ProfileView extends StatelessWidget {
                       );
                     }),
                     const SizedBox(height: 30),
+                    // Show current visibility package
+                    Obx(() {
+                      final user = userController.userModel.value;
+                      if (user == null || user.visibilityPackage == null) {
+                        return const SizedBox();
+                      }
+                      final expiry = user.visibilityPackageExpiry is Timestamp
+                          ? (user.visibilityPackageExpiry as Timestamp).toDate()
+                          : user.visibilityPackageExpiry;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Card(
+                          color: Colors.green[50],
+                          child: ListTile(
+                            leading: const Icon(Icons.verified, color: Colors.green),
+                            title: Text('Current Package: ${user.visibilityPackageName ?? user.visibilityPackage ?? ''}'),
+                            subtitle: expiry != null
+                                ? Text('Expires on: ${expiry.toString().split(' ')[0]}')
+                                : null,
+                          ),
+                        ),
+                      );
+                    }),
                     // Packages Section
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -104,7 +133,8 @@ class ProfileView extends StatelessWidget {
                                 return const Text('No packages available.');
                               }
                               return Column(
-                                children: packages.map((pkg) => Card(
+                                children: packages.map((pkg) => material.Card(
+                                  // Use material.Card to avoid conflict with Stripe's Card
                                   child: ListTile(
                                     leading: pkg.isPopular
                                         ? const Icon(Icons.star, color: Colors.orange)
@@ -112,8 +142,33 @@ class ProfileView extends StatelessWidget {
                                     title: Text('${pkg.credits} Credits'),
                                     subtitle: Text(pkg.description.isNotEmpty ? pkg.description : 'No description'),
                                     trailing: Text('\$${pkg.price.toStringAsFixed(2)}'),
-                                    onTap: () {
-                                      // TODO: Handle package purchase
+                                    onTap: () async {
+                                      final user = FirebaseAuth.instance.currentUser;
+                                      if (user == null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Please log in to purchase a package.')),
+                                        );
+                                        return;
+                                      }
+                                      try {
+                                        // Use the existing StripeService for payment
+                                        await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
+                                        // After successful payment, update the user's visibility package info
+                                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                                          'visibilityPackage': pkg.id,
+                                          'visibilityPackageName': '${pkg.credits} Credits',
+                                          'visibilityPackagePrice': pkg.price,
+                                          'visibilityPackagePurchasedAt': FieldValue.serverTimestamp(),
+                                          'visibilityPackageExpiry': Timestamp.fromDate(DateTime.now().add(const Duration(days: 30))),
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Visibility package purchased successfully!')),
+                                        );
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Payment failed or cancelled: $e')),
+                                        );
+                                      }
                                     },
                                   ),
                                 )).toList(),

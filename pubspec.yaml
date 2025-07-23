@@ -78,6 +78,7 @@ dependencies:
   in_app_purchase:
   file_picker: ^10.2.0
   geolocator:
+  cloud_functions: ^5.6.2
 
 dev_dependencies:
   flutter_test:
