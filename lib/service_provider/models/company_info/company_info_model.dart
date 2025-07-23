@@ -22,8 +22,8 @@ class CompanyInfo {
   double? latitude;
   double? longitude;
   int premiumPackage;
-  double? rankScore;
-  double? distanceFromUser;
+  final double? distanceFromUser;
+  final double? rankScore;
 
   CompanyInfo({
     this.facebookLink,this.twitterLink,
@@ -48,40 +48,43 @@ class CompanyInfo {
     this.latitude,
     this.longitude,
     this.premiumPackage = 0,
-    this.rankScore,
-    this.distanceFromUser
+    this.distanceFromUser,
+    this.rankScore
   });
 
-    CompanyInfo copyWith({
-    double? rankScore,
-    double? distanceFromUser
-  }) {
-    return CompanyInfo(
-      facebookLink: this.facebookLink,
-      twitterLink: this.twitterLink,
-      name: this.name,
-      logo: this.logo,
-      emailAddress: this.emailAddress,
-      phoneNumber: this.phoneNumber,
-      website: this.website,
-      location: this.location,
-      size: this.size,
-      experience: this.experience,
-      description: this.description,
-      certifications: this.certifications,
-      certificationStatus: this.certificationStatus,
-      adminComment: this.adminComment,
-      isVerified: this.isVerified,
-      gigDescription: this.gigDescription,
-      gigImage: this.gigImage,
-      averageRating: this.averageRating,
-      latitude: this.latitude,
-      longitude: this.longitude,
-      premiumPackage: this.premiumPackage,
-      rankScore: rankScore ?? this.rankScore,
-      distanceFromUser: distanceFromUser?? this.distanceFromUser
-    );
-  }
+  CompanyInfo copyWith({
+  double? distanceFromUser,
+  double? rankScore,
+}) {
+  return CompanyInfo(
+    facebookLink: this.facebookLink,
+    twitterLink: this.twitterLink,
+    name: this.name,
+    logo: this.logo,
+    emailAddress: this.emailAddress,
+    phoneNumber: this.phoneNumber,
+    website: this.website,
+    location: this.location,
+    size: this.size,
+    experience: this.experience,
+    description: this.description,
+    certifications: this.certifications,
+    certificationStatus: this.certificationStatus,
+    adminComment: this.adminComment,
+    isVerified: this.isVerified,
+    gigDescription: this.gigDescription,
+    gigImage: this.gigImage,
+    averageRating: this.averageRating,
+    latitude: this.latitude,
+    longitude: this.longitude,
+    premiumPackage: this.premiumPackage,
+    status: this.status,
+    rejectionComment: this.rejectionComment,
+    distanceFromUser: distanceFromUser ?? this.distanceFromUser,
+    rankScore: rankScore ?? this.rankScore,
+  );
+}
+
 
   // Convert CompanyInfo object to a Map for Firestore
   Map<String, dynamic> toMap() {
@@ -107,8 +110,6 @@ class CompanyInfo {
       'latitude': latitude,
       'longitude': longitude,
       'premiumPackage': premiumPackage,
-      'rankScore': rankScore,
-      'distanceFromUser': distanceFromUser,
       'status': status,
       'rejectionComment': rejectionComment,
     };
@@ -138,8 +139,6 @@ class CompanyInfo {
       latitude: map['latitude'] as double?,
       longitude: map['longitude'] as double?,
       premiumPackage: map['premiumPackage'] ?? 0,
-      rankScore: map['rankScore'] as double?,
-      distanceFromUser: map['distanceFromUser'] as double?,
       status: map['status'] as String?,
       rejectionComment: map['rejectionComment'] as String?,
     );

@@ -18,6 +18,9 @@ class UserModel {
   final DateTime lastSeen;
   final String? deviceToken;
 
+  final double? latitude;
+  final double? longitude;
+
   String? emailTemplate;
   String? smsTemplate;
   num credits;
@@ -43,6 +46,10 @@ class UserModel {
     required this.userName,
     required this.email,
     this.deviceToken,
+
+    this.latitude,
+    this.longitude,
+
     this.profilePicUrl,
     this.reviews,
     this.companyInfo,
@@ -68,6 +75,8 @@ class UserModel {
       'accountType': accountType,
       'email': email,
       'deviceToken': deviceToken,
+      'latitude': latitude,
+      'longitude': longitude,
       'profilePicUrl': profilePicUrl,
       'country': country,
       'phone': phone,
@@ -100,6 +109,8 @@ class UserModel {
       userName: json['userName'] ?? '',
       email: json['email'] ?? '',
       deviceToken: json['deviceToken'],
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
       profilePicUrl: json['profilePicUrl'],
       country: json['country'] ?? '',
       phone: json['phone'] ?? '',

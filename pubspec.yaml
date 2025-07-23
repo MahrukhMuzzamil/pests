@@ -78,6 +78,7 @@ dependencies:
   in_app_purchase:
   file_picker: ^10.2.0
   geolocator:
+  geocoding: ^4.0.0
   cloud_functions: ^5.6.2
 
 dev_dependencies:
