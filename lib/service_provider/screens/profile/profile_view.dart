@@ -111,7 +111,7 @@ class ProfileView extends StatelessWidget {
                                         : const Icon(Icons.credit_card),
                                     title: Text('${pkg.credits} Credits'),
                                     subtitle: Text(pkg.description.isNotEmpty ? pkg.description : 'No description'),
-                                    trailing: Text(' 24${pkg.price.toStringAsFixed(2)}'),
+                                    trailing: Text('\$${pkg.price.toStringAsFixed(2)}'),
                                     onTap: () {
                                       // TODO: Handle package purchase
                                     },
