@@ -10,6 +10,8 @@ import '../../../client/widgets/custom_menu_card.dart';
 import 'package:shimmer/shimmer.dart';
 import 'components/about/user_info_screen.dart';
 import 'components/widgets/profile_image_card.dart';
+import 'package:pests247/service_provider/services/package_service.dart';
+import 'package:pests247/shared/models/package/package.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -73,6 +75,54 @@ class ProfileView extends StatelessWidget {
                             fontWeight: FontWeight.w200, fontSize: 13),
                       );
                     }),
+                    const SizedBox(height: 30),
+                    // Packages Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Available Packages',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          StreamBuilder<List<Package>>(
+                            stream: PackageService().getPackagesStream(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              }
+                              final packages = snapshot.data ?? [];
+                              if (packages.isEmpty) {
+                                return const Text('No packages available.');
+                              }
+                              return Column(
+                                children: packages.map((pkg) => Card(
+                                  child: ListTile(
+                                    leading: pkg.isPopular
+                                        ? const Icon(Icons.star, color: Colors.orange)
+                                        : const Icon(Icons.credit_card),
+                                    title: Text('${pkg.credits} Credits'),
+                                    subtitle: Text(pkg.description.isNotEmpty ? pkg.description : 'No description'),
+                                    trailing: Text(' 24${pkg.price.toStringAsFixed(2)}'),
+                                    onTap: () {
+                                      // TODO: Handle package purchase
+                                    },
+                                  ),
+                                )).toList(),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 30),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
