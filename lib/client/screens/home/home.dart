@@ -17,7 +17,10 @@ import '../../../service_provider/models/company_info/company_info_model.dart';
 import '../../../service_provider/models/reviews/reviews_model.dart';
 import '../../../service_provider/models/question_answers/question_answers_model.dart';
 import 'components/company_profile_card.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../controllers/user_chat/chats_controller.dart';
+import '../../screens/user_chats/chat_screen.dart';
+import '../../../shared/models/user/user_model.dart';
 // Add these imports if you use geolocator or similar for current location
 import 'package:geolocator/geolocator.dart';
 
@@ -255,23 +258,59 @@ class _HomePageState extends State<HomePage> {
             const Spacer(),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-                onPressed: () {
-                  Get.to(() => CompanyProfileCard(
-                        userId: userId,
-                        companyInfo: companyInfo,
-                        reviews: reviews,
-                        questionAnswerForm: questionAnswerForm,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
-                      transition: Transition.cupertino);
-                },
-                child:
-                    const Text('View Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
+                      onPressed: () {
+                        Get.to(() => CompanyProfileCard(
+                              userId: userId,
+                              companyInfo: companyInfo,
+                              reviews: reviews,
+                              questionAnswerForm: questionAnswerForm,
+                            ),
+                            transition: Transition.cupertino);
+                      },
+                      child:
+                          const Text('View Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onPressed: () async {
+                        // Fetch the full user document for the service provider
+                        final docSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+                        if (!docSnap.exists) return;
+                        final userModel = UserModel.fromFirestore(docSnap);
+                        final ChatController chatController = Get.put(ChatController());
+                        await chatController.initializeChat(FirebaseAuth.instance.currentUser!.uid, userModel.uid);
+                        // Send the auto message
+                        await chatController.sendMessage(
+                          'Hi, can you share details?',
+                          userModel.uid,
+                          context,
+                          userController.userModel.value?.userName ?? '',
+                          userModel.deviceToken ?? '',
+                          null,
+                        );
+                        // Navigate to chat screen
+                        Get.to(() => ChatScreen(userModel: userModel), transition: Transition.cupertino);
+                      },
+                      child: const Text('Request Quote', style: TextStyle(fontSize: 14, color: Colors.white)),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
