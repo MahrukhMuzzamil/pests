@@ -152,18 +152,20 @@ class ProfileView extends StatelessWidget {
                                       }
                                       try {
                                         // Use the existing StripeService for payment
-                                        await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
-                                        // After successful payment, update the user's visibility package info
-                                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                                          'visibilityPackage': pkg.id,
-                                          'visibilityPackageName': '${pkg.credits} Credits',
-                                          'visibilityPackagePrice': pkg.price,
-                                          'visibilityPackagePurchasedAt': FieldValue.serverTimestamp(),
-                                          'visibilityPackageExpiry': Timestamp.fromDate(DateTime.now().add(const Duration(days: 30))),
-                                        });
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Visibility package purchased successfully!')),
-                                        );
+                                        final paymentSuccess = await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
+                                        if (paymentSuccess) {
+                                          // After successful payment, update the user's visibility package info
+                                          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                                            'visibilityPackage': pkg.id,
+                                            'visibilityPackageName': '${pkg.credits} Credits',
+                                            'visibilityPackagePrice': pkg.price,
+                                            'visibilityPackagePurchasedAt': FieldValue.serverTimestamp(),
+                                            'visibilityPackageExpiry': Timestamp.fromDate(DateTime.now().add(const Duration(days: 30))),
+                                          });
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Visibility package purchased successfully!')),
+                                          );
+                                        }
                                       } catch (e) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(content: Text('Payment failed or cancelled: $e')),

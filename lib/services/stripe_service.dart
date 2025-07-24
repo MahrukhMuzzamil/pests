@@ -16,8 +16,8 @@ class StripeService extends GetxController {
 
   final RxBool isLoading = false.obs;
 
-  Future<void> makePayment(BuildContext context, int credits, double price) async {
-    if (isLoading.value) return;
+  Future<bool> makePayment(BuildContext context, int credits, double price) async {
+    if (isLoading.value) return false;
 
     isLoading.value = true;
 
@@ -37,7 +37,11 @@ class StripeService extends GetxController {
       );
       print('[StripeService] Payment sheet initialized.');
 
+      await Stripe.instance.presentPaymentSheet();
+      print('[StripeService] Payment sheet presented successfully.');
+
       await processPayment(credits, context, price);
+      return true;
     } catch (e) {
       print('[StripeService] Error during payment: $e');
       CustomSnackbar.showSnackBar(
@@ -47,6 +51,7 @@ class StripeService extends GetxController {
         Theme.of(context).colorScheme.error,
         context,
       );
+      return false;
     } finally {
       isLoading.value = false;
       print('[StripeService] Payment process completed.');

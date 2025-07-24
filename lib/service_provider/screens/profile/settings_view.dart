@@ -25,6 +25,7 @@ class SettingsView extends StatefulWidget {
 class _SettingsViewState extends State<SettingsView> {
   bool isNotification = true;
   bool isDownloadAll = true;
+  //same func overridetr
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +89,8 @@ class _SettingsViewState extends State<SettingsView> {
             //         transition: Transition.cupertino);
             //   },
             // ),
+            //settings will be changed here
+
 
 
 

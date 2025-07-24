@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pests247/shared/controllers/service_base_rate_controller.dart';
 import '../../../../../client/models/others/gig.dart';
 
 class AddEditGigScreen extends StatefulWidget {
@@ -23,6 +24,15 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
   File? _imageFile;
   String? _imageUrl;
   bool _isLoading = false;
+  double? _minPrice;
+
+  final List<String> _categories = [
+    'Pest Control',
+    'Cleaning',
+    'Gardening',
+    // Add more categories as needed
+  ];
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -31,6 +41,14 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
     _descriptionController = TextEditingController(text: widget.gig?.description ?? '');
     _priceController = TextEditingController(text: widget.gig?.price.toString() ?? '');
     _imageUrl = widget.gig?.imageUrl;
+    _selectedCategory = _categories.first;
+    ServiceBaseRateController.getMinPriceForCategory(_selectedCategory!).then((min) {
+      if (mounted) {
+        setState(() {
+          _minPrice = min;
+        });
+      }
+    });
   }
 
   Future<void> _pickImage() async {
@@ -56,6 +74,20 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
 
   Future<void> _saveGig() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final providerSetPrice = double.tryParse(_priceController.text) ?? 0.0;
+    final selectedCategory = _selectedCategory ?? '';
+
+    final minPrice = await ServiceBaseRateController.getMinPriceForCategory(selectedCategory);
+    if (minPrice != null && providerSetPrice < minPrice) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Base price must be at least \$${minPrice.toStringAsFixed(2)} for $selectedCategory.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() { _isLoading = true; });
 
@@ -132,7 +164,37 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
                     ? 'Please enter a valid price'
                     : null,
               ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: _categories.map((cat) => DropdownMenuItem(
+                  value: cat,
+                  child: Text(cat),
+                )).toList(),
+                onChanged: (val) async {
+                  setState(() {
+                    _selectedCategory = val;
+                    _minPrice = null; // Reset while loading
+                  });
+                  if (val != null) {
+                    final min = await ServiceBaseRateController.getMinPriceForCategory(val);
+                    setState(() {
+                      _minPrice = min;
+                    });
+                  }
+                },
+                validator: (value) => value == null ? 'Please select a category' : null,
+              ),
               const SizedBox(height: 20),
+              if (_minPrice != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                  child: Text(
+                    'Minimum price for $_selectedCategory: \$${_minPrice!.toStringAsFixed(2)}',
+                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                  ),
+                ),
               Row(
                 children: [
                   _imageFile != null
@@ -165,4 +227,4 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
       ),
     );
   }
-} 
+}
