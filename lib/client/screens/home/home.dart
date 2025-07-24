@@ -43,17 +43,21 @@ class _HomePageState extends State<HomePage> {
     userController = Get.put(UserController(), permanent: true);
 
     userController.fetchUser();
-    _requestLocationPermission();
+    _handleLocationPermissionAndFetch();
   }
   
-  void _requestLocationPermission() async 
+  Future<void> _handleLocationPermissionAndFetch() async 
   {
     bool granted = await homeController.requestLocationPermission();
-    if (!granted) {
-      // Optionally show a dialog or snackbar informing the user about location permission.
+    if (granted) {
+      // Permission granted, now fetch location and update Firestore
+      await homeController.fetchAndStoreClientLocation(context);
+    } else {
+      // Permission denied, show snackbar or fallback happens inside fetchAndStoreClientLocation
       print('Location permission denied');
     }
   }
+
 
   void _checkLoginStatus() async {
     bool status = await AppController.checkLoginStatus();

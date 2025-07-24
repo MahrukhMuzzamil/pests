@@ -13,6 +13,8 @@ import '../../screens/on_board/start.dart';
 import 'package:pests247/service_provider/models/company_info/company_info_model.dart';
 import 'package:pests247/shared/utils/distance_utils.dart'; // import your utility
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';  // For Location and locationFromAddress
+
 
 class HomeController extends GetxController {
   UserModel? highestRatedUser;
@@ -47,6 +49,86 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> fetchAndStoreClientLocation(BuildContext context) async 
+  {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Show a prompt to enable location services
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // fallback to manual entry
+        await manualLocationFallback(context);
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // fallback to manual entry
+      await manualLocationFallback(context);
+      return;
+    }
+
+    // Fetch current position
+    Position position = await Geolocator.getCurrentPosition();
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .update({
+      'latitude': position.latitude,
+      'longitude': position.longitude,
+    });
+  }
+
+  Future<void> manualLocationFallback(BuildContext context) async 
+  {
+    String? address = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        TextEditingController controller = TextEditingController();
+        return AlertDialog(
+          title: Text("Enter Your Location"),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: "e.g. 123 Street, City"),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () {
+                  Navigator.pop(context, controller.text);
+                },
+                child: Text("Submit")),
+          ],
+        );
+      },
+    );
+
+    if (address != null && address.isNotEmpty) {
+      try {
+        List<Location> locations = await locationFromAddress(address);
+        if (locations.isNotEmpty) {
+          Location location = locations.first;
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(FirebaseAuth.instance.currentUser!.uid)
+              .update({
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+          });
+        }
+      } catch (e) {
+        print("Error geocoding address: $e");
+      }
+    }
+  }
 
   Future<void> fetchHighestRatedUser() async {
     final QuerySnapshot snapshot = await FirebaseFirestore.instance
@@ -90,6 +172,62 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<List<CompanyInfo>> getRankedBusinesses(
+      List<CompanyInfo> businesses, double? userLat, double? userLng) async {
+    
+    List<CompanyInfo> scoredCompanies = [];
+
+    for (var company in businesses) {
+      double rating = company.averageRating ?? 0.0;
+      int package = company.premiumPackage;
+      double? distance;
+
+      if (userLat != null && userLng != null && 
+          company.latitude != null && company.longitude != null) {
+        distance = haversine(userLat, userLng, company.latitude!, company.longitude!);
+      }
+
+      // RankScore calculation
+      double rankScore = 0.0;
+      rankScore += rating * 2;       // weight for rating
+      rankScore += package * 5;      // weight for package
+
+      // Apply proximity boost only if distance is known
+      if (distance != null) {
+        double proximityScore = (10 - (distance / 5)).clamp(0, 10);
+        rankScore += proximityScore;
+      }
+
+      // Attach runtime values to company object
+      company = company.copyWith(
+        distanceFromUser: distance,
+        rankScore: rankScore,
+      );
+
+      scoredCompanies.add(company);
+    }
+
+    // Group by package
+    List<CompanyInfo> package1 = scoredCompanies.where((c) => c.premiumPackage == 1).toList();
+    List<CompanyInfo> package2 = scoredCompanies.where((c) => c.premiumPackage == 2).toList();
+    List<CompanyInfo> package3 = scoredCompanies.where((c) => c.premiumPackage == 3).toList();
+    List<CompanyInfo> package0 = scoredCompanies.where((c) => c.premiumPackage == 0).toList();
+
+    // Sort each by descending rankScore
+    package1.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package2.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package3.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package0.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+
+    // Respect max slot per package tier
+    List<CompanyInfo> finalRanked = [];
+    finalRanked.addAll(package1.take(5));
+    finalRanked.addAll(package2.take(10));
+    finalRanked.addAll(package3.take(20));
+    finalRanked.addAll(package0);
+
+    return finalRanked;
+  }
 
 
   Future<void> logoutUser() async {
@@ -142,64 +280,6 @@ class HomeController extends GetxController {
       }
     }
   }
-
-  Future<List<CompanyInfo>> getRankedBusinesses(List<CompanyInfo> businesses, double userLat, double userLng) async 
-  {
-
-    List<CompanyInfo> scoredCompanies = [];
-
-    for (var company in businesses) {
-      // Handle null values
-      double rating = company.averageRating ?? 0.0;
-      int package = company.premiumPackage;
-      double? distance;
-
-      if (company.latitude != null && company.longitude != null) {
-        distance = haversine(userLat, userLng, company.latitude!, company.longitude!);
-      }
-
-      // Calculate rankScore
-      double rankScore = 0.0;
-
-      // Base score from rating and package (always available)
-      rankScore += rating * 2;          // weight for rating
-      rankScore += package * 5;         // weight for package
-
-      // If location is available, factor proximity in score
-      if (distance != null) {
-        rankScore += (10 - (distance / 5)).clamp(0, 10); // Higher proximity = higher score
-      }
-
-      // Add distance info for UI
-      company = company.copyWith(
-        distanceFromUser: distance,
-        rankScore: rankScore,
-      );
-
-      scoredCompanies.add(company);
-    }
-
-    // Group by package
-    List<CompanyInfo> package1 = scoredCompanies.where((c) => c.premiumPackage == 1).toList();
-    List<CompanyInfo> package2 = scoredCompanies.where((c) => c.premiumPackage == 2).toList();
-    List<CompanyInfo> package3 = scoredCompanies.where((c) => c.premiumPackage == 3).toList();
-    List<CompanyInfo> package0 = scoredCompanies.where((c) => c.premiumPackage == 0).toList();
-
-    // Sort each group by rankScore descending
-    package1.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
-    package2.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
-    package3.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
-    package0.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
-
-    // Respect priority
-    List<CompanyInfo> finalRanked = [];
-    finalRanked.addAll(package1.take(5));       // Top 5 from package 1
-    finalRanked.addAll(package2.take(10));      // Top 10 from package 2
-    finalRanked.addAll(package3.take(20));      // Top 20 from package 3
-    finalRanked.addAll(package0);               // Add rest (no premium)
-
-    return finalRanked;
-}
 
 
     Future<Position?> getCurrentLocation() async 
