@@ -34,4 +34,16 @@ class Keys {
       print("Error loading API keys: $e");
     }
   }
+
+  static Future<double> fetchCustomOfferCommission() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('config')
+        .doc('commission')
+        .get();
+    if (snapshot.exists) {
+      final data = snapshot.data();
+      return (data?['customOfferCommissionPercent'] as num?)?.toDouble() ?? 10.0;
+    }
+    return 20.0; // default
+  }
 }
