@@ -13,6 +13,8 @@ import 'package:shimmer/shimmer.dart';
 import '../../controllers/user_chat/chats_controller.dart';
 import '../../controllers/user_chat/typing_indicator.dart';
 import '../../../shared/models/user/user_model.dart';
+import '../../../shared/models/custom_offer_model.dart';
+import '../../../service_provider/widgets/custom_offer_form.dart';
 import 'components/chat_app_bar.dart';
 
 class ChatScreen extends StatelessWidget {
@@ -47,6 +49,28 @@ class ChatScreen extends StatelessWidget {
           } else {
             return Column(
               children: [
+                // Custom Offer StreamBuilder
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                    .collection('chat_room')
+                    .doc(chatController.chatRoomId)
+                    .collection('custom_offers')
+                    .orderBy('createdAt', descending: false)
+                    .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
+                    final offers = snapshot.data!.docs
+                        .map((doc) => CustomOffer.fromMap(doc.data() as Map<String, dynamic>))
+                        .toList();
+                    return Column(
+                      children: offers.map((offer) => CustomOfferWidget(
+                        offer: offer,
+                        isClient: userController.accountType == 'client',
+                        chatRoomId: chatController.chatRoomId,
+                      )).toList(),
+                    );
+                  },
+                ),
                 Expanded(
                   child: buildMessageList(userModel.uid,
                       FirebaseAuth.instance.currentUser?.uid ?? "No user id"),
@@ -62,6 +86,23 @@ class ChatScreen extends StatelessWidget {
                     return Container();
                   }
                 }),
+                // Show Send Custom Offer button for service providers
+                if (userController.accountType == 'serviceProvider')
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => CustomOfferForm(
+                            clientId: userModel.uid,
+                            chatId: chatController.chatRoomId,
+                          ),
+                        );
+                      },
+                      child: const Text('Send Custom Offer'),
+                    ),
+                  ),
                 buildMessageInput(context),
               ],
             );
@@ -273,8 +314,6 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-
-
   Widget buildMessageInput(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 25, left: 10, right: 10, top: 15),
@@ -452,10 +491,6 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-
-
-
-
   void showMediaSelectionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -515,5 +550,56 @@ class ChatScreen extends StatelessWidget {
         curve: Curves.easeOut,
       );
     }
+  }
+}
+
+class CustomOfferWidget extends StatelessWidget {
+  final CustomOffer offer;
+  final bool isClient;
+  final String chatRoomId;
+  const CustomOfferWidget({required this.offer, required this.isClient, required this.chatRoomId, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Service: ${offer.description}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Price: \$${offer.totalPrice} (${offer.feeType})'),
+            Text('Timeline: ${offer.timeline}'),
+            Text('Commission: ${offer.commissionPercent}%'),
+            if (offer.status == 'pending' && isClient)
+              Row(
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _respondToOffer(context, 'accepted'),
+                    child: const Text('Accept'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => _respondToOffer(context, 'declined'),
+                    child: const Text('Decline'),
+                  ),
+                ],
+              ),
+            if (offer.status != 'pending')
+              Text('Status: ${offer.status}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _respondToOffer(BuildContext context, String status) async {
+    await FirebaseFirestore.instance
+      .collection('chat_room')
+      .doc(chatRoomId)
+      .collection('custom_offers')
+      .doc(offer.id)
+      .update({'status': status});
   }
 }

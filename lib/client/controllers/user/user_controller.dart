@@ -55,4 +55,9 @@ class UserController extends GetxController {
       print('Error updating user: $e');
     }
   }
+
+  String? get accountType {
+    return userModel.value?.accountType;
+  }
+
 }
