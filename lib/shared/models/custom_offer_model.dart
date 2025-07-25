@@ -9,8 +9,13 @@ class CustomOffer {
   final String timeline;
   final String feeType; // e.g., 'per visit', 'one-time'
   final double commissionPercent;
-  final String status; // 'pending', 'accepted', 'declined'
+  final String status; // 'pending', 'accepted', 'declined', 'paid'
   final DateTime createdAt;
+  final DateTime? paymentDate;
+  final double? commissionAmount;
+  final double? providerAmount;
+  final double? totalPaid;
+  final String? paymentMethod;
 
   CustomOffer({
     required this.id,
@@ -23,6 +28,11 @@ class CustomOffer {
     required this.commissionPercent,
     required this.status,
     required this.createdAt,
+    this.paymentDate,
+    this.commissionAmount,
+    this.providerAmount,
+    this.totalPaid,
+    this.paymentMethod,
   });
 
   Map<String, dynamic> toMap() => {
@@ -36,6 +46,11 @@ class CustomOffer {
     'commissionPercent': commissionPercent,
     'status': status,
     'createdAt': createdAt.toIso8601String(),
+    'paymentDate': paymentDate?.toIso8601String(),
+    'commissionAmount': commissionAmount,
+    'providerAmount': providerAmount,
+    'totalPaid': totalPaid,
+    'paymentMethod': paymentMethod,
   };
 
   factory CustomOffer.fromMap(Map<String, dynamic> map) => CustomOffer(
@@ -49,6 +64,11 @@ class CustomOffer {
     commissionPercent: (map['commissionPercent'] as num).toDouble(),
     status: map['status'],
     createdAt: DateTime.parse(map['createdAt']),
+    paymentDate: map['paymentDate'] != null ? DateTime.parse(map['paymentDate']) : null,
+    commissionAmount: map['commissionAmount'] != null ? (map['commissionAmount'] as num).toDouble() : null,
+    providerAmount: map['providerAmount'] != null ? (map['providerAmount'] as num).toDouble() : null,
+    totalPaid: map['totalPaid'] != null ? (map['totalPaid'] as num).toDouble() : null,
+    paymentMethod: map['paymentMethod'],
   );
 
   factory CustomOffer.fromFirestore(DocumentSnapshot doc) {

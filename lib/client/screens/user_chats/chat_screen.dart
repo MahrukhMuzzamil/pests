@@ -16,6 +16,7 @@ import '../../../shared/models/user/user_model.dart';
 import '../../../shared/models/custom_offer_model.dart';
 import '../../../service_provider/widgets/custom_offer_form.dart';
 import 'components/chat_app_bar.dart';
+import '../../../services/custom_offer_payment_service.dart';
 
 class ChatScreen extends StatelessWidget {
   final UserModel userModel;
@@ -586,7 +587,31 @@ class CustomOfferWidget extends StatelessWidget {
                   ),
                 ],
               ),
-            if (offer.status != 'pending')
+            if (offer.status == 'accepted' && isClient)
+              ElevatedButton(
+                onPressed: () => _processPayment(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Pay Now'),
+              ),
+            if (offer.status == 'paid')
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Text('Payment Completed', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            if (offer.status != 'pending' && offer.status != 'paid')
               Text('Status: ${offer.status}', style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
@@ -601,5 +626,15 @@ class CustomOfferWidget extends StatelessWidget {
       .collection('custom_offers')
       .doc(offer.id)
       .update({'status': status});
+  }
+
+  void _processPayment(BuildContext context) async {
+    final paymentService = CustomOfferPaymentService.instance;
+    final success = await paymentService.processCustomOfferPayment(context, offer);
+    
+    if (success) {
+      // The payment service will update the offer status to 'paid'
+      // No additional action needed here
+    }
   }
 }
