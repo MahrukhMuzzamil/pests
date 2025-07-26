@@ -24,6 +24,7 @@ class CompanyInfo {
   int premiumPackage;
   final double? distanceFromUser;
   final double? rankScore;
+  String? stripeAccountId; // Stripe Connect account ID for payments
 
   CompanyInfo({
     this.facebookLink,this.twitterLink,
@@ -49,12 +50,14 @@ class CompanyInfo {
     this.longitude,
     this.premiumPackage = 0,
     this.distanceFromUser,
-    this.rankScore
+    this.rankScore,
+    this.stripeAccountId,
   });
 
   CompanyInfo copyWith({
   double? distanceFromUser,
   double? rankScore,
+  String? stripeAccountId,
 }) {
   return CompanyInfo(
     facebookLink: this.facebookLink,
@@ -82,6 +85,7 @@ class CompanyInfo {
     rejectionComment: this.rejectionComment,
     distanceFromUser: distanceFromUser ?? this.distanceFromUser,
     rankScore: rankScore ?? this.rankScore,
+    stripeAccountId: stripeAccountId ?? this.stripeAccountId,
   );
 }
 
@@ -112,6 +116,7 @@ class CompanyInfo {
       'premiumPackage': premiumPackage,
       'status': status,
       'rejectionComment': rejectionComment,
+      'stripeAccountId': stripeAccountId,
     };
   }
 
@@ -141,6 +146,7 @@ class CompanyInfo {
       premiumPackage: map['premiumPackage'] ?? 0,
       status: map['status'] as String?,
       rejectionComment: map['rejectionComment'] as String?,
+      stripeAccountId: map['stripeAccountId'] as String?,
     );
   }
 }

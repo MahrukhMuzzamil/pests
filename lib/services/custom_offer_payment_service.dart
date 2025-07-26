@@ -87,6 +87,22 @@ class CustomOfferPaymentService extends GetxController {
           .doc(offer.id)
           .update(paymentData);
 
+      /*
+      // Get provider's Stripe account ID
+      final providerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(offer.providerId)
+          .get();
+      
+      final providerData = providerDoc.data();
+      final companyInfo = providerData?['companyInfo'] as Map<String, dynamic>?;
+      final stripeAccountId = companyInfo?['stripeAccountId'] as String?;
+
+      // Transfer amount to provider if they have a Stripe account
+      if (stripeAccountId != null && stripeAccountId.isNotEmpty) {
+        await _transferToProvider(stripeAccountId, providerAmount, offer);
+      }*/
+
       // Create a payment record for tracking
       await FirebaseFirestore.instance
           .collection('payments')
@@ -104,12 +120,76 @@ class CustomOfferPaymentService extends GetxController {
         'description': offer.description,
         'feeType': offer.feeType,
         'timeline': offer.timeline,
+        //'providerStripeAccountId': stripeAccountId,
+        //'transferStatus': stripeAccountId != null && stripeAccountId.isNotEmpty ? 'pending' : 'no_account',
       });
 
       print('[CustomOfferPaymentService] Payment details updated successfully.');
     } catch (e) {
       print('[CustomOfferPaymentService] Error updating payment details: $e');
       throw e;
+    }
+  }
+
+  Future<void> _transferToProvider(String stripeAccountId, double amount, CustomOffer offer) async {
+    try {
+      print('[CustomOfferPaymentService] Transferring \$${amount} to provider account: $stripeAccountId');
+      
+      final Dio dio = Dio();
+      Map<String, dynamic> data = {
+        "amount": _calculateAmount(amount),
+        "currency": "cad",
+        "destination": stripeAccountId,
+        "description": "Payment for: ${offer.description}",
+      };
+
+      var response = await dio.post(
+        'https://api.stripe.com/v1/transfers',
+        data: data,
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          headers: {
+            "Authorization": "Bearer ${Keys.stripeSecretKey}",
+            "Content-Type": 'application/x-www-form-urlencoded',
+          },
+        ),
+      );
+
+      print('[CustomOfferPaymentService] Transfer response: ${response.data}');
+      
+      if (response.data != null) {
+        // Update payment record with transfer details
+        await FirebaseFirestore.instance
+            .collection('payments')
+            .where('offerId', isEqualTo: offer.id)
+            .get()
+            .then((querySnapshot) {
+          if (querySnapshot.docs.isNotEmpty) {
+            querySnapshot.docs.first.reference.update({
+              'transferStatus': 'completed',
+              'transferId': response.data['id'],
+              'transferDate': DateTime.now().toIso8601String(),
+            });
+          }
+        });
+        
+        print('[CustomOfferPaymentService] Transfer completed successfully.');
+      }
+    } catch (e) {
+      print('[CustomOfferPaymentService] Error transferring to provider: $e');
+      // Update payment record with transfer failure
+      await FirebaseFirestore.instance
+          .collection('payments')
+          .where('offerId', isEqualTo: offer.id)
+          .get()
+          .then((querySnapshot) {
+        if (querySnapshot.docs.isNotEmpty) {
+          querySnapshot.docs.first.reference.update({
+            'transferStatus': 'failed',
+            'transferError': e.toString(),
+          });
+        }
+      });
     }
   }
 

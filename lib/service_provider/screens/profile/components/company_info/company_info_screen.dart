@@ -10,6 +10,7 @@ import '../widgets/profile_image_card.dart';
 import 'dart:io';
 import 'dart:ui';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CompanyInfoScreen extends StatelessWidget {
   const CompanyInfoScreen({super.key});
@@ -34,6 +35,7 @@ class CompanyInfoScreen extends StatelessWidget {
     );
 
     final TextEditingController gigDescriptionController = TextEditingController(text: companyInfo?.gigDescription ?? '');
+    final TextEditingController stripeAccountIdController = TextEditingController(text: companyInfo?.stripeAccountId ?? '');
 
     return Scaffold(
       appBar: AppBar(
@@ -44,8 +46,23 @@ class CompanyInfoScreen extends StatelessWidget {
             padding: const EdgeInsets.only(right: 12.0),
             child: CustomIconButton(
               onTap: () async {
-                if (companyInfoController.detectChanges) {
+                if (companyInfoController.detectChanges || stripeAccountIdController.text != (companyInfo?.stripeAccountId ?? '')) {
                   await companyInfoController.updateCompanyInfo();
+                  
+                  // Update stripeAccountId separately if it changed
+                  if (stripeAccountIdController.text != (companyInfo?.stripeAccountId ?? '')) {
+                    try {
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(userController.userModel.value!.uid)
+                          .update({
+                        'companyInfo.stripeAccountId': stripeAccountIdController.text,
+                      });
+                      await userController.fetchUser();
+                    } catch (e) {
+                      print('Error updating stripeAccountId: $e');
+                    }
+                  }
                 } else {
                   CustomSnackbar.showSnackBar(
                     'Info',
@@ -188,7 +205,23 @@ class CompanyInfoScreen extends StatelessWidget {
                   labelText: '',
                   prefixIcon: Icons.web,
                 ),
-                // const SizedBox(height: 30),
+                const SizedBox(height: 30),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Your Stripe Connect Account ID for receiving payments.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                buildTextField(
+                  controller: stripeAccountIdController,
+                  labelText: '',
+                  prefixIcon: Icons.payment,
+                ),
+                const SizedBox(height: 30),
 
                 // const Align(
                 //   alignment: Alignment.centerLeft,

@@ -23,8 +23,10 @@ class CompanyInfoController extends GetxController {
   var size = ''.obs;
   var experience = ''.obs;
   var description = ''.obs;
+  //var stripeAccountId = ''.obs;
   var isLoading = false.obs;
   var isChanged = false.obs;
+  var isInitialized = false.obs;
   var locationSuggestions = <String>[].obs;
   var gigDescription = ''.obs;
   var gigImage = ''.obs;
@@ -41,6 +43,7 @@ class CompanyInfoController extends GetxController {
   late TextEditingController sizeController;
   late TextEditingController experienceController;
   late TextEditingController descriptionController;
+  //late TextEditingController stripeAccountIdController;
 
   @override
   void onInit() {
@@ -53,6 +56,7 @@ class CompanyInfoController extends GetxController {
     sizeController = TextEditingController();
     experienceController = TextEditingController();
     descriptionController = TextEditingController();
+    //stripeAccountIdController = TextEditingController();
     _tryGetLocation();
   }
 
@@ -72,7 +76,14 @@ class CompanyInfoController extends GetxController {
 
   void setCompanyInfo(String name, String email, String phone, String website,
       String location, String size, String experience, String description, {
+        //String gigDesc = '', String gigImg = '', List<String>? certs, String stripeAccountId = ''}) {
       String gigDesc = '', String gigImg = '', List<String>? certs}) {
+    
+    // Prevent multiple initializations
+    if (isInitialized.value) {
+      return;
+    }
+    
     companyNameController.text = name;
     emailController.text = email;
     phoneController.text = phone;
@@ -81,6 +92,7 @@ class CompanyInfoController extends GetxController {
     sizeController.text = size;
     experienceController.text = experience;
     descriptionController.text = description;
+    //stripeAccountIdController.text = stripeAccountId;
     gigDescription.value = gigDesc;
     gigImage.value = gigImg;
     certifications.value = certs ?? [];
@@ -93,8 +105,10 @@ class CompanyInfoController extends GetxController {
     this.size.value = size;
     this.experience.value = experience;
     this.description.value = description;
+   // this.stripeAccountId.value = stripeAccountId;
 
     isChanged.value = false;
+    isInitialized.value = true;
   }
 
   bool get detectChanges {
@@ -112,7 +126,10 @@ class CompanyInfoController extends GetxController {
         description.value != (companyInfo?.description ?? '') ||
         gigDescription.value != (companyInfo?.gigDescription ?? '') ||
         gigImage.value != (companyInfo?.gigImage ?? '') ||
+       /* !listEquals(certifications, companyInfo?.certifications ?? []) ||
+        stripeAccountId.value != (companyInfo?.stripeAccountId ?? '');*/
         !listEquals(certifications, companyInfo?.certifications ?? []);
+
   }
 
 
@@ -223,6 +240,9 @@ class CompanyInfoController extends GetxController {
       String userId = userController.userModel.value!.uid;
       // Preserve existing averageRating if present
       double? existingAverageRating = userController.userModel.value?.companyInfo?.averageRating;
+      // Preserve existing stripeAccountId if present
+      String? existingStripeAccountId = userController.userModel.value?.companyInfo?.stripeAccountId;
+      
       Map<String, dynamic> companyInfo = {
         'name': companyName.value,
         'emailAddress': email.value,
@@ -236,6 +256,8 @@ class CompanyInfoController extends GetxController {
         'gigDescription': gigDescription.value,
         'gigImage': gigImage.value,
         'certifications': certifications,
+        //'stripeAccountId': stripeAccountId.value,
+        'stripeAccountId': existingStripeAccountId, // Preserve existing stripeAccountId
         'status': 'pending', // Set status to pending on update
         'rejectionComment': null, // Clear rejection comment on update
         'averageRating': existingAverageRating, // <-- preserve
@@ -272,6 +294,7 @@ class CompanyInfoController extends GetxController {
         gigDesc: gigDescription.value,
         gigImg: gigImage.value,
         certs: certifications,
+        //stripeAccountId: stripeAccountId.value,
       );
       isLoading.value = false;
       CustomSnackbar.showSnackBar(
@@ -303,6 +326,7 @@ class CompanyInfoController extends GetxController {
     sizeController.dispose();
     experienceController.dispose();
     descriptionController.dispose();
+    //stripeAccountIdController.dispose();
     super.onClose();
   }
 
