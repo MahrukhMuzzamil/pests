@@ -122,6 +122,13 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
       } else {
         await gigCollection.add(gigData);
       }
+      await FirebaseFirestore.instance.collection('leads').add({
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'latitude': 0.0, // Replace with actual latitude
+        'longitude': 0.0, // Replace with actual longitude
+        // ...other fields...
+      });
       Get.back();
     } catch (e) {
       Get.snackbar('Error', 'Failed to save gig: $e');
