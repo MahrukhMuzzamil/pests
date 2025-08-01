@@ -33,6 +33,7 @@ class ChatController extends GetxController {
   RxBool isImage = false.obs;
   Rx<XFile?> media = Rx<XFile?>(null);
   RxBool isMediaUploading = false.obs;
+  String? lastMessageId; // Track the last sent message ID
 
   void onMessageChanged(String message) {
     canSend.value = message.trim().isNotEmpty || media.value != null;
@@ -426,7 +427,7 @@ class ChatController extends GetxController {
     return await taskSnapshot.ref.getDownloadURL();
   }
 
-  Future<void> _sendMessage(String chatRoomId, String receiverId,
+  Future<String> _sendMessage(String chatRoomId, String receiverId,
       String? message, String? media) async {
     final String? currentUserId = _firebaseAuth.currentUser?.uid;
     final String? currentUserEmail = _firebaseAuth.currentUser?.email;
@@ -448,12 +449,14 @@ class ChatController extends GetxController {
         .collection('message')
         .doc(id)
         .set(newMessage.toMap());
+    
+    return id; // Return the message ID
   }
 
   Future<void> sendMessage(String text, String receiverId, BuildContext context,
       String currentUserName, String sendDeviceToken, String? media) async {
     messageController.clear();
-    await _sendMessage(chatRoomId, receiverId, text, media);
+    lastMessageId = await _sendMessage(chatRoomId, receiverId, text, media);
     isMessageEmpty.value = true;
     stopTyping();
     if (sendDeviceToken.isNotEmpty) {

@@ -14,9 +14,14 @@ import '../../controllers/user_chat/chats_controller.dart';
 import '../../controllers/user_chat/typing_indicator.dart';
 import '../../../shared/models/user/user_model.dart';
 import '../../../shared/models/custom_offer_model.dart';
+import '../../../shared/models/custom_order_model.dart';
 import '../../../service_provider/widgets/custom_offer_form.dart';
 import 'components/chat_app_bar.dart';
 import '../../../services/custom_offer_payment_service.dart';
+import '../../../services/notification_services.dart';
+import 'package:uuid/uuid.dart';
+import 'widgets/custom_offer_widget.dart';
+import 'widgets/delivery_completion_widget.dart';
 
 class ChatScreen extends StatelessWidget {
   final UserModel userModel;
@@ -72,6 +77,31 @@ class ChatScreen extends StatelessWidget {
                     );
                   },
                 ),
+                // Delivery Completion StreamBuilder
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                    .collection('chat_room')
+                    .doc(chatController.chatRoomId)
+                    .collection('delivery_completions')
+                    .orderBy('createdAt', descending: false)
+                    .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
+                    final deliveries = snapshot.data!.docs;
+                    return Column(
+                      children: deliveries.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return DeliveryCompletionWidget(
+                          messageId: doc.id,
+                          chatRoomId: chatController.chatRoomId,
+                          isClient: userController.accountType == 'client',
+                          providerId: data['providerId'] ?? '',
+                          clientId: data['clientId'] ?? '',
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
                 Expanded(
                   child: buildMessageList(userModel.uid,
                       FirebaseAuth.instance.currentUser?.uid ?? "No user id"),
@@ -91,17 +121,34 @@ class ChatScreen extends StatelessWidget {
                 if (userController.accountType == 'serviceProvider')
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomOfferForm(
-                            clientId: userModel.uid,
-                            chatId: chatController.chatRoomId,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => CustomOfferForm(
+                                  clientId: userModel.uid,
+                                  chatId: chatController.chatRoomId,
+                                ),
+                              );
+                            },
+                            child: const Text('Send Custom Offer'),
                           ),
-                        );
-                      },
-                      child: const Text('Send Custom Offer'),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _sendDeliveryCompletedMessage(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Delivery Completed'),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 buildMessageInput(context),
@@ -207,13 +254,26 @@ class ChatScreen extends StatelessWidget {
     final String messageId = document.id;
     final Timestamp? timestamp = data['timeStamp'] as Timestamp?;
     final String? mediaUrl = data['mediaUrl'];
+    final bool isDeliveryCompletion = data['isDeliveryCompletion'] ?? false;
+    final String? deliveryCompletionId = data['deliveryCompletionId'];
     final DateTime time =
         timestamp != null ? timestamp.toDate() : DateTime.now();
     final String formattedTime = DateFormat('hh:mm a').format(time);
     final bool isCurrentUserSender = senderId == userId;
 
-    if (message.isEmpty && (mediaUrl == null || mediaUrl.isEmpty)) {
+    if (message.isEmpty && (mediaUrl == null || mediaUrl.isEmpty) && !isDeliveryCompletion) {
       return Container();
+    }
+
+    // If this is a delivery completion message, show the widget
+    if (isDeliveryCompletion && deliveryCompletionId != null) {
+      return DeliveryCompletionWidget(
+        messageId: deliveryCompletionId,
+        chatRoomId: chatController.chatRoomId,
+        isClient: userController.accountType == 'client',
+        providerId: senderId,
+        clientId: userId,
+      );
     }
 
     return GestureDetector(
@@ -552,89 +612,51 @@ class ChatScreen extends StatelessWidget {
       );
     }
   }
-}
 
-class CustomOfferWidget extends StatelessWidget {
-  final CustomOffer offer;
-  final bool isClient;
-  final String chatRoomId;
-  const CustomOfferWidget({required this.offer, required this.isClient, required this.chatRoomId, Key? key}) : super(key: key);
+  void _sendDeliveryCompletedMessage(BuildContext context) async {
+    try {
+      // Create delivery completion record
+      final deliveryId = const Uuid().v4();
+      await FirebaseFirestore.instance
+          .collection('chat_room')
+          .doc(chatController.chatRoomId)
+          .collection('delivery_completions')
+          .doc(deliveryId)
+          .set({
+        'id': deliveryId,
+        'status': 'pending',
+        'createdAt': Timestamp.now(),
+        'providerId': FirebaseAuth.instance.currentUser!.uid,
+        'clientId': userModel.uid,
+      });
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Service: ${offer.description}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text('Price: \$${offer.totalPrice} (${offer.feeType})'),
-            Text('Timeline: ${offer.timeline}'),
-            Text('Commission: ${offer.commissionPercent}%'),
-            if (offer.status == 'pending' && isClient)
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _respondToOffer(context, 'accepted'),
-                    child: const Text('Accept'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _respondToOffer(context, 'declined'),
-                    child: const Text('Decline'),
-                  ),
-                ],
-              ),
-            if (offer.status == 'accepted' && isClient)
-              ElevatedButton(
-                onPressed: () => _processPayment(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Pay Now'),
-              ),
-            if (offer.status == 'paid')
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Text('Payment Completed', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            if (offer.status != 'pending' && offer.status != 'paid')
-              Text('Status: ${offer.status}', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
+      // Send the delivery completed message
+      final String message = 'Delivery completed. Please confirm.';
+      await chatController.sendMessage(
+        message,
+        userModel.uid,
+        context,
+        userController.userModel.value!.userName,
+        userModel.deviceToken ?? '',
+        null,
+      );
 
-  void _respondToOffer(BuildContext context, String status) async {
-    await FirebaseFirestore.instance
-      .collection('chat_room')
-      .doc(chatRoomId)
-      .collection('custom_offers')
-      .doc(offer.id)
-      .update({'status': status});
-  }
+      // Add delivery completion widget to the message
+      await FirebaseFirestore.instance
+          .collection('chat_room')
+          .doc(chatController.chatRoomId)
+          .collection('message')
+          .doc(chatController.lastMessageId)
+          .update({
+        'isDeliveryCompletion': true,
+        'deliveryCompletionId': deliveryId,
+      });
 
-  void _processPayment(BuildContext context) async {
-    final paymentService = CustomOfferPaymentService.instance;
-    final success = await paymentService.processCustomOfferPayment(context, offer);
-    
-    if (success) {
-      // The payment service will update the offer status to 'paid'
-      // No additional action needed here
+      chatController.messageController.clear();
+      chatController.stopTyping();
+      scrollToBottom();
+    } catch (e) {
+      print('Error sending delivery completed message: $e');
     }
   }
 }
