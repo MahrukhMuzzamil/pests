@@ -10,12 +10,14 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final UserModel userModel;
   final ChatController chatController;
   final bool isSelected;
+  final VoidCallback? onClearChat;
 
   const ChatAppBar({
     super.key,
     required this.userModel,
     required this.chatController,
     required this.isSelected,
+    this.onClearChat,
   });
 
   @override
@@ -61,7 +63,16 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
             },
             icon: const Icon(Icons.delete),
           )
-              : Container();
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: onClearChat,
+                      icon: const Icon(Icons.clear_all),
+                      tooltip: 'Clear Chat',
+                    ),
+                  ],
+                );
         }),
       ],
     );

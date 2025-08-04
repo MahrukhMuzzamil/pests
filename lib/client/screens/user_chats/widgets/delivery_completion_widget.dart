@@ -41,79 +41,106 @@ class DeliveryCompletionWidget extends StatelessWidget {
         
         final String status = data['status'] ?? 'pending';
         final DateTime createdAt = (data['createdAt'] as Timestamp).toDate();
-        final DateTime autoAcceptDate = createdAt.add(const Duration(days: 3));
+        final DateTime autoAcceptDate = createdAt.add(const Duration(minutes: 2));
         final bool isExpired = DateTime.now().isAfter(autoAcceptDate);
         
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          elevation: 2,
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.orange),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.check_circle, color: Colors.orange, size: 16),
+                    const SizedBox(width: 4),
                     const Text(
                       'Delivery Completed',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(status).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        status.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: _getStatusColor(status),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text('Service provider has marked the delivery as completed.'),
+                const SizedBox(height: 6),
+                Text(
+                  'Service provider has marked the delivery as completed.',
+                  style: const TextStyle(fontSize: 12),
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Auto-acceptance in: ${_formatTimeRemaining(autoAcceptDate)}',
+                  'Auto acceptance in: ${_formatTimeRemaining(autoAcceptDate)}',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: Colors.grey,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
-                const SizedBox(height: 12),
                 if (isClient && status == 'pending' && !isExpired)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _respondToDelivery(context, 'accepted'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _respondToDelivery(context, 'accepted'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              minimumSize: const Size(0, 28),
+                            ),
+                            child: const Text('Accept', style: TextStyle(fontSize: 11)),
                           ),
-                          child: const Text('Accept'),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _respondToDelivery(context, 'declined'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _respondToDelivery(context, 'declined'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              minimumSize: const Size(0, 28),
+                            ),
+                            child: const Text('Decline', style: TextStyle(fontSize: 11)),
                           ),
-                          child: const Text('Decline'),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 if (status == 'accepted')
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle, color: Colors.green),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.check_circle, color: Colors.green, size: 14),
+                        const SizedBox(width: 4),
                         const Expanded(
                           child: Text(
                             'Delivery accepted. Payment will be released to provider in 14 days.',
-                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                         ),
                       ],
@@ -121,36 +148,38 @@ class DeliveryCompletionWidget extends StatelessWidget {
                   ),
                 if (status == 'declined')
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.cancel, color: Colors.red),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.cancel, color: Colors.red, size: 14),
+                        const SizedBox(width: 4),
                         const Text(
                           'Delivery declined by client.',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ],
                     ),
                   ),
                 if (isExpired && status == 'pending')
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.access_time, color: Colors.orange),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.access_time, color: Colors.orange, size: 14),
+                        const SizedBox(width: 4),
                         const Text(
                           'Auto-accepted due to time expiration.',
-                          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ],
                     ),
@@ -174,14 +203,26 @@ class DeliveryCompletionWidget extends StatelessWidget {
     final days = difference.inDays;
     final hours = difference.inHours % 24;
     final minutes = difference.inMinutes % 60;
+
+    final seconds = difference.inSeconds % 60;
+
     
-    if (days > 0) {
+    /*if (days > 0) {
       return '$days days, $hours hours';
     } else if (hours > 0) {
       return '$hours hours, $minutes minutes';
     } else {
       return '$minutes minutes';
-    }
+    }*/
+      if (days > 0) {
+        return '$days days, $hours hours';
+      } else if (hours > 0) {
+        return '$hours hours, $minutes minutes';
+      } else if (minutes > 0) {
+        return '$minutes minutes, $seconds seconds';
+      } else {
+        return '$seconds seconds';
+      }
   }
 
   void _respondToDelivery(BuildContext context, String status) async {
@@ -232,7 +273,9 @@ class DeliveryCompletionWidget extends StatelessWidget {
       final data = doc.data() as Map<String, dynamic>;
       final String status = data['status'] ?? 'pending';
       final DateTime createdAt = (data['createdAt'] as Timestamp).toDate();
-      final DateTime autoAcceptDate = createdAt.add(const Duration(days: 3));
+      //final DateTime autoAcceptDate = createdAt.add(const Duration(days: 3));
+      final DateTime autoAcceptDate = createdAt.add(const Duration(minutes: 2));
+
       
       // If status is still pending and 3 days have passed, auto-accept
       if (status == 'pending' && DateTime.now().isAfter(autoAcceptDate)) {
@@ -262,6 +305,19 @@ class DeliveryCompletionWidget extends StatelessWidget {
       }
     } catch (e) {
       print('Error updating order status: $e');
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'declined':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 } 

@@ -13,60 +13,153 @@ class CustomOfferWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Service: ${offer.description}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text('Price: \$${offer.totalPrice} (${offer.feeType})'),
-            Text('Timeline: ${offer.timeline}'),
-            Text('Commission: ${offer.commissionPercent}%'),
+            Row(
+              children: [
+                const Icon(Icons.attach_money, color: Colors.blue, size: 16),
+                const SizedBox(width: 4),
+                const Text(
+                  'Custom Offer',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(offer.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    offer.status.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _getStatusColor(offer.status),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              offer.description,
+              style: const TextStyle(fontSize: 12),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  '\$${offer.totalPrice}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '(${offer.feeType})',
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+                const Spacer(),
+                Text(
+                  '${offer.commissionPercent}% fee',
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ],
+            ),
             if (offer.status == 'pending' && isClient)
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _respondToOffer(context, 'accepted'),
-                    child: const Text('Accept'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _respondToOffer(context, 'declined'),
-                    child: const Text('Decline'),
-                  ),
-                ],
-              ),
-            if (offer.status == 'accepted' && isClient)
-              ElevatedButton(
-                onPressed: () => _processPayment(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Pay Now'),
-              ),
-            if (offer.status == 'paid')
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Text('Payment Completed', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _respondToOffer(context, 'accepted'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          minimumSize: const Size(0, 28),
+                        ),
+                        child: const Text('Accept', style: TextStyle(fontSize: 11)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _respondToOffer(context, 'declined'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          minimumSize: const Size(0, 28),
+                        ),
+                        child: const Text('Decline', style: TextStyle(fontSize: 11)),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            if (offer.status != 'pending' && offer.status != 'paid')
-              Text('Status: ${offer.status}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (offer.status == 'accepted' && isClient)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _processPayment(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      minimumSize: const Size(0, 28),
+                    ),
+                    child: const Text('Pay Now', style: TextStyle(fontSize: 11)),
+                  ),
+                ),
+              ),
+            if (offer.status == 'paid')
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 14),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Payment Completed',
+                      style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.blue;
+      case 'declined':
+        return Colors.red;
+      case 'paid':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
 
   void _respondToOffer(BuildContext context, String status) async {

@@ -16,6 +16,8 @@ class CustomOffer {
   final double? providerAmount;
   final double? totalPaid;
   final String? paymentMethod;
+  final List<String>? clearedFor;
+  final DateTime? clearedAt;
 
   CustomOffer({
     required this.id,
@@ -33,6 +35,8 @@ class CustomOffer {
     this.providerAmount,
     this.totalPaid,
     this.paymentMethod,
+    this.clearedFor,
+    this.clearedAt,
   });
 
   Map<String, dynamic> toMap() => {
@@ -51,6 +55,8 @@ class CustomOffer {
     'providerAmount': providerAmount,
     'totalPaid': totalPaid,
     'paymentMethod': paymentMethod,
+    'clearedFor': clearedFor,
+    'clearedAt': clearedAt?.toIso8601String(),
   };
 
   factory CustomOffer.fromMap(Map<String, dynamic> map) => CustomOffer(
@@ -69,6 +75,8 @@ class CustomOffer {
     providerAmount: map['providerAmount'] != null ? (map['providerAmount'] as num).toDouble() : null,
     totalPaid: map['totalPaid'] != null ? (map['totalPaid'] as num).toDouble() : null,
     paymentMethod: map['paymentMethod'],
+    clearedFor: map['clearedFor'] != null ? List<String>.from(map['clearedFor']) : null,
+    clearedAt: map['clearedAt'] != null ? (map['clearedAt'] is Timestamp ? (map['clearedAt'] as Timestamp).toDate() : DateTime.parse(map['clearedAt'])) : null,
   );
 
   factory CustomOffer.fromFirestore(DocumentSnapshot doc) {
