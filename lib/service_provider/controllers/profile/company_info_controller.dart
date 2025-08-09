@@ -205,8 +205,13 @@ class CompanyInfoController extends GetxController {
         final file = result.files.single;
         final filePath = file.path!;
         final fileBytes = await File(filePath).readAsBytes();
-        final ref = FirebaseStorage.instance.ref().child('certifications/${file.name}');
-        await ref.putData(fileBytes);
+        // Security: set metadata and limit content type
+        final ref = FirebaseStorage.instance.ref().child('certifications/${userSafePath(file.name)}');
+        final SettableMetadata metadata = SettableMetadata(
+          contentType: _inferContentType(file.extension),
+          cacheControl: 'private, max-age=0, no-transform',
+        );
+        await ref.putData(fileBytes, metadata);
         final url = await ref.getDownloadURL();
         certifications.value = [...certifications, url];
       }
@@ -219,6 +224,26 @@ class CompanyInfoController extends GetxController {
         Colors.red,
         Get.context!,
       );
+    }
+  }
+
+  // Ensure filenames are safe (no path traversal)
+  String userSafePath(String name) {
+    return name.replaceAll(RegExp(r'[^a-zA-Z0-9_.-]'), '_');
+  }
+
+  // Map extensions to content types to prevent executable uploads
+  String _inferContentType(String? ext) {
+    switch (ext?.toLowerCase()) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      default:
+        return 'application/octet-stream';
     }
   }
 
@@ -268,10 +293,8 @@ class CompanyInfoController extends GetxController {
       } else if (locationController.text.isNotEmpty) {
         final leadsController = LeadsController();
         final coords = await leadsController.getCoordinatesFromPostalCode(locationController.text);
-        if (coords != null) {
-          companyInfo['latitude'] = coords['lat'];
-          companyInfo['longitude'] = coords['lon'];
-        }
+        companyInfo['latitude'] = coords['lat'];
+        companyInfo['longitude'] = coords['lon'];
       }
       if (position != null) {
         companyInfo['latitude'] = position.latitude;

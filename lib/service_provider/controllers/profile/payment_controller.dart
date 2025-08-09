@@ -16,59 +16,37 @@ class PaymentController extends GetxController {
   final TextEditingController cardExpiryController = TextEditingController();
 
   void updateCardDetails(String cardNumber, String cardExpiry) async {
+    // PCI-DSS: Do not collect or store full card numbers/expiry in Firestore.
+    // Cards are handled securely by Stripe PaymentSheet.
     isLoading.value = true;
-    final UserController userController = Get.find();
+    try {
+      final UserController userController = Get.find();
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Purge any previously stored sensitive fields if present
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
+          'cardNumber': FieldValue.delete(),
+          'cardExpiry': FieldValue.delete(),
+        });
+        await userController.fetchUser();
+      }
 
-    String month = cardExpiry.substring(0, 2);
-    int monthInt = int.tryParse(month) ?? 0;
-
-    if (monthInt > 12) {
-      CustomSnackbar.showSnackBar(
-        "Error",
-        "Invalid expiry month. Month cannot be greater than 12.",
-        const Icon(Icons.error, color: Colors.white),
-        Colors.red,
-        Get.context!,
-      );
-      isLoading.value = false;
-      return;
-    }
-    if (userController.userModel.value!.cardNumber == cardNumber) {
-      CustomSnackbar.showSnackBar(
-        "Notice",
-        "The card number you entered is the same as the previous one. If you'd like to update, please make sure the details are correct.",
-        const Icon(Icons.info, color: Colors.white),
-        Colors.orange,
-        Get.context!,
-      );
-      isLoading.value = false;
-      return;
-    }
-
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
-        'cardNumber': cardNumber,
-        'cardExpiry': cardExpiry,
-      });
-
-      await userController.fetchUser();
       cardNumberController.clear();
       cardExpiryController.clear();
 
       CustomSnackbar.showSnackBar(
-        "Success",
-        "Your card details have been updated.",
-        const Icon(Icons.check_circle, color: Colors.white),
-        Colors.green,
+        "Managed by Stripe",
+        "Cards are saved and managed securely by Stripe. We don't store card numbers.",
+        const Icon(Icons.lock, color: Colors.white),
+        Colors.blue,
         Get.context!,
       );
+    } finally {
+      isLoading.value = false;
     }
-
-    isLoading.value = false;
   }
 
   String formatCardNumber(String text) {
