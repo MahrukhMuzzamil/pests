@@ -3,9 +3,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:get/get.dart';
+import 'package:uuid/uuid.dart';
 import '../client/widgets/custom_snackbar.dart';
 import '../data/keys.dart';
 import '../shared/models/custom_offer_model.dart';
+import '../shared/models/custom_order_model.dart';
+import '../services/notification_services.dart';
 
 class CustomOfferPaymentService extends GetxController {
   CustomOfferPaymentService._();
@@ -41,8 +44,11 @@ class CustomOfferPaymentService extends GetxController {
       await Stripe.instance.presentPaymentSheet();
       print('[CustomOfferPaymentService] Payment completed successfully.');
 
-      // Update offer status and store payment details
-      await _updateOfferAfterPayment(offer, commissionAmount, providerAmount);
+      // Update offer status and create order
+      await _updateOfferAndCreateOrder(offer, commissionAmount, providerAmount);
+      
+      // Send notifications to both parties
+      await _sendOrderNotifications(offer);
       
       CustomSnackbar.showSnackBar(
         'Payment Successful',
@@ -68,7 +74,7 @@ class CustomOfferPaymentService extends GetxController {
     }
   }
 
-  Future<void> _updateOfferAfterPayment(CustomOffer offer, double commissionAmount, double providerAmount) async {
+  Future<void> _updateOfferAndCreateOrder(CustomOffer offer, double commissionAmount, double providerAmount) async {
     try {
       final paymentData = {
         'status': 'paid',
@@ -87,7 +93,6 @@ class CustomOfferPaymentService extends GetxController {
           .doc(offer.id)
           .update(paymentData);
 
-      /*
       // Get provider's Stripe account ID
       final providerDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -98,15 +103,38 @@ class CustomOfferPaymentService extends GetxController {
       final companyInfo = providerData?['companyInfo'] as Map<String, dynamic>?;
       final stripeAccountId = companyInfo?['stripeAccountId'] as String?;
 
-      // Transfer amount to provider if they have a Stripe account
-      if (stripeAccountId != null && stripeAccountId.isNotEmpty) {
-        await _transferToProvider(stripeAccountId, providerAmount, offer);
-      }*/
+      // Create CustomOrder record
+      final orderId = const Uuid().v4();
+      final customOrder = CustomOrder(
+        id: orderId,
+        offerId: offer.id,
+        providerId: offer.providerId,
+        clientId: offer.clientId,
+        description: offer.description,
+        grossPrice: offer.totalPrice,
+        commissionAmount: commissionAmount,
+        providerEarnings: providerAmount,
+        commissionPercent: offer.commissionPercent,
+        status: 'in_progress', // Order status is now "In Progress"
+        createdAt: DateTime.now(),
+        paymentDate: DateTime.now(),
+        startedDate: DateTime.now(), // Order starts immediately after payment
+        paymentMethod: 'Stripe',
+        providerStripeAccountId: stripeAccountId,
+        transferStatus: 'pending', // Provider earnings held in pending state
+      );
+
+      // Store the order in Firestore
+      await FirebaseFirestore.instance
+          .collection('custom_orders')
+          .doc(orderId)
+          .set(customOrder.toMap());
 
       // Create a payment record for tracking
       await FirebaseFirestore.instance
           .collection('payments')
           .add({
+        'orderId': orderId,
         'offerId': offer.id,
         'providerId': offer.providerId,
         'clientId': offer.clientId,
@@ -120,14 +148,56 @@ class CustomOfferPaymentService extends GetxController {
         'description': offer.description,
         'feeType': offer.feeType,
         'timeline': offer.timeline,
-        //'providerStripeAccountId': stripeAccountId,
-        //'transferStatus': stripeAccountId != null && stripeAccountId.isNotEmpty ? 'pending' : 'no_account',
+        'orderStatus': 'in_progress',
+        'providerStripeAccountId': stripeAccountId,
+        'transferStatus': 'pending',
       });
 
-      print('[CustomOfferPaymentService] Payment details updated successfully.');
+      print('[CustomOfferPaymentService] Order created and payment details updated successfully.');
     } catch (e) {
-      print('[CustomOfferPaymentService] Error updating payment details: $e');
+      print('[CustomOfferPaymentService] Error updating offer and creating order: $e');
       throw e;
+    }
+  }
+
+  Future<void> _sendOrderNotifications(CustomOffer offer) async {
+    try {
+      // Get user details for notifications
+      final clientDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(offer.clientId)
+          .get();
+      final providerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(offer.providerId)
+          .get();
+      
+      final clientData = clientDoc.data();
+      final providerData = providerDoc.data();
+      
+      final clientName = clientData?['userName'] ?? 'Client';
+      final providerName = providerData?['userName'] ?? 'Provider';
+
+      // Send notification to client
+      await NotificationsServices.sendNotificationToDevice(
+        offer.clientId,
+        Get.context!,
+        'Pests 247',
+        'Your order has been confirmed and is now in progress!',
+      );
+
+      // Send notification to provider
+      await NotificationsServices.sendNotificationToDevice(
+        offer.providerId,
+        Get.context!,
+        'Pests 247',
+        'New order received! Please start working on: ${offer.description}',
+      );
+
+      print('[CustomOfferPaymentService] Notifications sent successfully.');
+    } catch (e) {
+      print('[CustomOfferPaymentService] Error sending notifications: $e');
+      // Don't throw error for notification failures
     }
   }
 

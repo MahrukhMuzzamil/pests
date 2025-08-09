@@ -23,8 +23,23 @@ class _CustomOfferFormState extends State<CustomOfferForm> {
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
   final _timelineController = TextEditingController();
-  String _feeType = 'one-time';
+  final _feeTypeController = TextEditingController();
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _feeTypeController.text = 'one-time';
+  }
+
+  @override
+  void dispose() {
+    _descController.dispose();
+    _priceController.dispose();
+    _timelineController.dispose();
+    _feeTypeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,12 +62,9 @@ class _CustomOfferFormState extends State<CustomOfferForm> {
               controller: _timelineController,
               decoration: const InputDecoration(labelText: 'Timeline'),
             ),
-            DropdownButton<String>(
-              value: _feeType,
-              items: ['one-time', 'per visit']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => _feeType = v!),
+            TextField(
+              controller: _feeTypeController,
+              decoration: const InputDecoration(labelText: 'Fee Type'),
             ),
           ],
         ),
@@ -72,7 +84,9 @@ class _CustomOfferFormState extends State<CustomOfferForm> {
                 description: _descController.text,
                 totalPrice: double.tryParse(_priceController.text) ?? 0,
                 timeline: _timelineController.text,
-                feeType: _feeType,
+                feeType: _feeTypeController.text.isEmpty
+                    ? 'one-time'
+                    : _feeTypeController.text,
                 commissionPercent: commission,
                 status: 'pending',
                 createdAt: DateTime.now(),

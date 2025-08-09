@@ -33,6 +33,7 @@ class ChatController extends GetxController {
   RxBool isImage = false.obs;
   Rx<XFile?> media = Rx<XFile?>(null);
   RxBool isMediaUploading = false.obs;
+  String? lastMessageId; // Track the last sent message ID
 
   void onMessageChanged(String message) {
     canSend.value = message.trim().isNotEmpty || media.value != null;
@@ -426,7 +427,7 @@ class ChatController extends GetxController {
     return await taskSnapshot.ref.getDownloadURL();
   }
 
-  Future<void> _sendMessage(String chatRoomId, String receiverId,
+  Future<String> _sendMessage(String chatRoomId, String receiverId,
       String? message, String? media) async {
     final String? currentUserId = _firebaseAuth.currentUser?.uid;
     final String? currentUserEmail = _firebaseAuth.currentUser?.email;
@@ -448,12 +449,14 @@ class ChatController extends GetxController {
         .collection('message')
         .doc(id)
         .set(newMessage.toMap());
+    
+    return id; // Return the message ID
   }
 
   Future<void> sendMessage(String text, String receiverId, BuildContext context,
       String currentUserName, String sendDeviceToken, String? media) async {
     messageController.clear();
-    await _sendMessage(chatRoomId, receiverId, text, media);
+    lastMessageId = await _sendMessage(chatRoomId, receiverId, text, media);
     isMessageEmpty.value = true;
     stopTyping();
     if (sendDeviceToken.isNotEmpty) {
@@ -516,5 +519,108 @@ class ChatController extends GetxController {
         .where('isRead', isEqualTo: false)
         .where('receiverId', isEqualTo: userId)
         .snapshots();
+  }
+
+  Future<void> clearChatHistory(String chatRoomId) async {
+    try {
+      final String? currentUserId = _firebaseAuth.currentUser?.uid;
+      if (currentUserId == null) return;
+
+      // Get all messages in the chat room
+      final messagesQuery = await _firebaseFirestore
+          .collection('chat_room')
+          .doc(chatRoomId)
+          .collection('message')
+          .get();
+
+      // Update messages to mark them as cleared for the current user
+      final batch = _firebaseFirestore.batch();
+      
+      for (var doc in messagesQuery.docs) {
+        final messageData = doc.data();
+        final senderId = messageData['senderId'] as String?;
+        final receiverId = messageData['receiverId'] as String?;
+        
+        // Clear messages if current user is either sender or receiver
+        if (senderId == currentUserId || receiverId == currentUserId) {
+          batch.update(doc.reference, {
+            'clearedFor': FieldValue.arrayUnion([currentUserId]),
+            'clearedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // Also clear custom offers and delivery completions for the current user
+      await _clearNotificationsForUser(chatRoomId, currentUserId);
+
+      await batch.commit();
+      
+      // Force refresh the chat streams
+      await _refreshChatStreams();
+      
+      print('Chat history cleared for user: $currentUserId');
+    } catch (e) {
+      print('Error clearing chat history: $e');
+    }
+  }
+
+  Future<void> _refreshChatStreams() async {
+    // Force refresh by temporarily setting initialized to false and back to true
+    isInitialized.value = false;
+    await Future.delayed(const Duration(milliseconds: 200));
+    isInitialized.value = true;
+  }
+
+  Future<void> _clearNotificationsForUser(String chatRoomId, String userId) async {
+    try {
+      // Clear custom offers
+      final offersQuery = await _firebaseFirestore
+          .collection('chat_room')
+          .doc(chatRoomId)
+          .collection('custom_offers')
+          .get();
+
+      final batch = _firebaseFirestore.batch();
+      
+      for (var doc in offersQuery.docs) {
+        final offerData = doc.data();
+        final providerId = offerData['providerId'] as String?;
+        final clientId = offerData['clientId'] as String?;
+        
+        // Clear offers if current user is either provider or client
+        if (providerId == userId || clientId == userId) {
+          batch.update(doc.reference, {
+            'clearedFor': FieldValue.arrayUnion([userId]),
+            'clearedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      // Clear delivery completions
+      final deliveriesQuery = await _firebaseFirestore
+          .collection('chat_room')
+          .doc(chatRoomId)
+          .collection('delivery_completions')
+          .get();
+
+      for (var doc in deliveriesQuery.docs) {
+        final deliveryData = doc.data();
+        final providerId = deliveryData['providerId'] as String?;
+        final clientId = deliveryData['clientId'] as String?;
+        
+        // Clear deliveries if current user is either provider or client
+        if (providerId == userId || clientId == userId) {
+          batch.update(doc.reference, {
+            'clearedFor': FieldValue.arrayUnion([userId]),
+            'clearedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+
+      await batch.commit();
+      print('Notifications cleared for user: $userId');
+    } catch (e) {
+      print('Error clearing notifications: $e');
+    }
   }
 }

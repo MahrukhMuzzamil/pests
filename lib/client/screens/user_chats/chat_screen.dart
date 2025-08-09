@@ -14,9 +14,14 @@ import '../../controllers/user_chat/chats_controller.dart';
 import '../../controllers/user_chat/typing_indicator.dart';
 import '../../../shared/models/user/user_model.dart';
 import '../../../shared/models/custom_offer_model.dart';
+import '../../../shared/models/custom_order_model.dart';
 import '../../../service_provider/widgets/custom_offer_form.dart';
 import 'components/chat_app_bar.dart';
 import '../../../services/custom_offer_payment_service.dart';
+import '../../../services/notification_services.dart';
+import 'package:uuid/uuid.dart';
+import 'widgets/custom_offer_widget.dart';
+import 'widgets/delivery_completion_widget.dart';
 
 class ChatScreen extends StatelessWidget {
   final UserModel userModel;
@@ -26,6 +31,7 @@ class ChatScreen extends StatelessWidget {
   final ChatController chatController = Get.put(ChatController());
   final ScrollController _scrollController = ScrollController();
   final UserController userController = Get.find();
+  final RxBool showNotifications = true.obs; // Add toggle for notifications
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +49,7 @@ class ChatScreen extends StatelessWidget {
           userModel: userModel,
           chatController: chatController,
           isSelected: chatController.selectedMessageIds.isNotEmpty,
+          onClearChat: () => _showClearChatDialog(context),
         ),
         body: Obx(() {
           if (!chatController.isInitialized.value) {
@@ -50,27 +57,153 @@ class ChatScreen extends StatelessWidget {
           } else {
             return Column(
               children: [
-                // Custom Offer StreamBuilder
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                    .collection('chat_room')
-                    .doc(chatController.chatRoomId)
-                    .collection('custom_offers')
-                    .orderBy('createdAt', descending: false)
-                    .snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
-                    final offers = snapshot.data!.docs
-                        .map((doc) => CustomOffer.fromMap(doc.data() as Map<String, dynamic>))
-                        .toList();
-                    return Column(
-                      children: offers.map((offer) => CustomOfferWidget(
-                        offer: offer,
-                        isClient: userController.accountType == 'client',
-                        chatRoomId: chatController.chatRoomId,
-                      )).toList(),
-                    );
-                  },
+                // Scrollable notifications container
+                Obx(() => showNotifications.value ? Container(
+                  height: 200, // Fixed height for notifications
+                  child: Column(
+                    children: [
+                      // Notifications header
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.notifications, size: 16, color: Colors.grey),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Notifications',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text(
+                                'Scroll',
+                                style: TextStyle(fontSize: 10, color: Colors.grey),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () => showNotifications.value = false,
+                              child: const Icon(Icons.keyboard_arrow_up, size: 16, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Notifications content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              // Custom Offer StreamBuilder
+                              StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                  .collection('chat_room')
+                                  .doc(chatController.chatRoomId)
+                                  .collection('custom_offers')
+                                  .orderBy('createdAt', descending: false)
+                                  .snapshots(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
+                                  
+                                  // Filter out cleared offers for current user
+                                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                                  final offers = snapshot.data!.docs
+                                      .where((doc) {
+                                        final data = doc.data() as Map<String, dynamic>;
+                                        final clearedFor = data['clearedFor'] as List<dynamic>?;
+                                        return clearedFor == null || !clearedFor.contains(currentUserId);
+                                      })
+                                      .map((doc) => CustomOffer.fromMap(doc.data() as Map<String, dynamic>))
+                                      .toList();
+                                  
+                                  if (offers.isEmpty) return SizedBox();
+                                  
+                                  return Column(
+                                    children: offers.map((offer) => CustomOfferWidget(
+                                      offer: offer,
+                                      isClient: userController.accountType == 'client',
+                                      chatRoomId: chatController.chatRoomId,
+                                    )).toList(),
+                                  );
+                                },
+                              ),
+                              // Delivery Completion StreamBuilder
+                              StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                  .collection('chat_room')
+                                  .doc(chatController.chatRoomId)
+                                  .collection('delivery_completions')
+                                  .orderBy('createdAt', descending: false)
+                                  .snapshots(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
+                                  
+                                  // Filter out cleared deliveries for current user
+                                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                                  final deliveries = snapshot.data!.docs
+                                      .where((doc) {
+                                        final data = doc.data() as Map<String, dynamic>;
+                                        final clearedFor = data['clearedFor'] as List<dynamic>?;
+                                        return clearedFor == null || !clearedFor.contains(currentUserId);
+                                      })
+                                      .toList();
+                                  
+                                  if (deliveries.isEmpty) return SizedBox();
+                                  
+                                  return Column(
+                                    children: deliveries.map((doc) {
+                                      final data = doc.data() as Map<String, dynamic>;
+                                      return DeliveryCompletionWidget(
+                                        messageId: doc.id,
+                                        chatRoomId: chatController.chatRoomId,
+                                        isClient: userController.accountType == 'client',
+                                        providerId: data['providerId'] ?? '',
+                                        clientId: data['clientId'] ?? '',
+                                      );
+                                    }).toList(),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ) : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notifications, size: 16, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Notifications hidden',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => showNotifications.value = true,
+                        child: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )),
+                // Divider to separate notifications from messages
+                Container(
+                  height: 1,
+                  color: Colors.grey.withOpacity(0.3),
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
                 Expanded(
                   child: buildMessageList(userModel.uid,
@@ -89,20 +222,62 @@ class ChatScreen extends StatelessWidget {
                 }),
                 // Show Send Custom Offer button for service providers
                 if (userController.accountType == 'serviceProvider')
-                  Padding(
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('chat_room')
+                        .doc(chatController.chatRoomId)
+                        .collection('custom_offers')
+                        .where('status', isEqualTo: 'paid')
+                        .limit(1)
+                        .snapshots(),
+                    builder: (context, offerSnapshot) {
+                      final bool hasCompletedOrder = offerSnapshot.hasData && offerSnapshot.data!.docs.isNotEmpty;
+                      
+                      return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => CustomOfferForm(
-                            clientId: userModel.uid,
-                            chatId: chatController.chatRoomId,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => CustomOfferForm(
+                                  clientId: userModel.uid,
+                                  chatId: chatController.chatRoomId,
+                                ),
+                              );
+                            },
+                                style: ElevatedButton.styleFrom(
+                                  alignment: Alignment.center,
+                                ),
+                                child: const Text(
+                                  'Send Custom Offer',
+                                  textAlign: TextAlign.center,
+                                ),
                           ),
-                        );
-                      },
-                      child: const Text('Send Custom Offer'),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                                onPressed: hasCompletedOrder 
+                                    ? () => _sendDeliveryCompletedMessage(context)
+                                    : null,
+                            style: ElevatedButton.styleFrom(
+                                  backgroundColor: hasCompletedOrder ? Colors.green : Colors.grey,
+                              foregroundColor: Colors.white,
+                                  alignment: Alignment.center,
+                                ),
+                                child: const Text(
+                                  'Delivery Completed',
+                                  textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                      );
+                    },
                   ),
                 buildMessageInput(context),
               ],
@@ -174,6 +349,20 @@ class ChatScreen extends StatelessWidget {
           );
         }
 
+        // Filter out cleared messages for current user
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        final filteredDocs = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final clearedFor = data['clearedFor'] as List<dynamic>?;
+          return clearedFor == null || !clearedFor.contains(currentUserId);
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return const Center(
+            child: Text('No messages'),
+          );
+        }
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController
@@ -183,7 +372,7 @@ class ChatScreen extends StatelessWidget {
 
         return ListView(
           controller: _scrollController,
-          children: snapshot.data!.docs
+          children: filteredDocs
               .map((document) => buildMessageItem(document, user, context))
               .toList(),
         );
@@ -207,13 +396,26 @@ class ChatScreen extends StatelessWidget {
     final String messageId = document.id;
     final Timestamp? timestamp = data['timeStamp'] as Timestamp?;
     final String? mediaUrl = data['mediaUrl'];
+    final bool isDeliveryCompletion = data['isDeliveryCompletion'] ?? false;
+    final String? deliveryCompletionId = data['deliveryCompletionId'];
     final DateTime time =
         timestamp != null ? timestamp.toDate() : DateTime.now();
     final String formattedTime = DateFormat('hh:mm a').format(time);
     final bool isCurrentUserSender = senderId == userId;
 
-    if (message.isEmpty && (mediaUrl == null || mediaUrl.isEmpty)) {
+    if (message.isEmpty && (mediaUrl == null || mediaUrl.isEmpty) && !isDeliveryCompletion) {
       return Container();
+    }
+
+    // If this is a delivery completion message, show the widget
+    if (isDeliveryCompletion && deliveryCompletionId != null) {
+      return DeliveryCompletionWidget(
+        messageId: deliveryCompletionId,
+        chatRoomId: chatController.chatRoomId,
+        isClient: userController.accountType == 'client',
+        providerId: senderId,
+        clientId: userId,
+      );
     }
 
     return GestureDetector(
@@ -552,89 +754,106 @@ class ChatScreen extends StatelessWidget {
       );
     }
   }
-}
 
-class CustomOfferWidget extends StatelessWidget {
-  final CustomOffer offer;
-  final bool isClient;
-  final String chatRoomId;
-  const CustomOfferWidget({required this.offer, required this.isClient, required this.chatRoomId, Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Service: ${offer.description}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text('Price: \$${offer.totalPrice} (${offer.feeType})'),
-            Text('Timeline: ${offer.timeline}'),
-            Text('Commission: ${offer.commissionPercent}%'),
-            if (offer.status == 'pending' && isClient)
-              Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _respondToOffer(context, 'accepted'),
-                    child: const Text('Accept'),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => _respondToOffer(context, 'declined'),
-                    child: const Text('Decline'),
-                  ),
-                ],
+  void _showClearChatDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.clear_all, color: Colors.orange),
+              const SizedBox(width: 8),
+              const Text('Clear Chat'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Are you sure you want to clear this chat?',
+                style: TextStyle(fontSize: 16),
               ),
-            if (offer.status == 'accepted' && isClient)
-              ElevatedButton(
-                onPressed: () => _processPayment(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Pay Now'),
-              ),
-            if (offer.status == 'paid')
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Text('Payment Completed', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                  ],
+              const SizedBox(height: 8),
+              Text(
+                'This will clear all messages, offers, and notifications in this chat for you. The other person will still see their content.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-            if (offer.status != 'pending' && offer.status != 'paid')
-              Text('Status: ${offer.status}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.orange),
+              child: const Text('Clear'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await chatController.clearChatHistory(chatController.chatRoomId);
+                chatController.messageController.clear();
+                chatController.stopTyping();
+                scrollToBottom();
+              },
+            ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
-  void _respondToOffer(BuildContext context, String status) async {
-    await FirebaseFirestore.instance
-      .collection('chat_room')
-      .doc(chatRoomId)
-      .collection('custom_offers')
-      .doc(offer.id)
-      .update({'status': status});
-  }
+  void _sendDeliveryCompletedMessage(BuildContext context) async {
+    try {
+      // Create delivery completion record
+      final deliveryId = const Uuid().v4();
+      await FirebaseFirestore.instance
+          .collection('chat_room')
+          .doc(chatController.chatRoomId)
+          .collection('delivery_completions')
+          .doc(deliveryId)
+          .set({
+        'id': deliveryId,
+        'status': 'pending',
+        'createdAt': Timestamp.now(),
+        'providerId': FirebaseAuth.instance.currentUser!.uid,
+        'clientId': userModel.uid,
+      });
 
-  void _processPayment(BuildContext context) async {
-    final paymentService = CustomOfferPaymentService.instance;
-    final success = await paymentService.processCustomOfferPayment(context, offer);
-    
-    if (success) {
-      // The payment service will update the offer status to 'paid'
-      // No additional action needed here
+      // Send the delivery completed message
+      final String message = 'Delivery completed. Please confirm.';
+      await chatController.sendMessage(
+        message,
+        userModel.uid,
+        context,
+        userController.userModel.value!.userName,
+        userModel.deviceToken ?? '',
+        null,
+      );
+
+      // Add delivery completion widget to the message
+      await FirebaseFirestore.instance
+          .collection('chat_room')
+          .doc(chatController.chatRoomId)
+          .collection('message')
+          .doc(chatController.lastMessageId)
+          .update({
+        'isDeliveryCompletion': true,
+        'deliveryCompletionId': deliveryId,
+      });
+
+      chatController.messageController.clear();
+      chatController.stopTyping();
+      scrollToBottom();
+    } catch (e) {
+      print('Error sending delivery completed message: $e');
     }
   }
 }
