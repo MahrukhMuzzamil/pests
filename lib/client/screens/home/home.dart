@@ -139,6 +139,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
@@ -176,69 +177,51 @@ class _HomePageState extends State<HomePage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 2),
-                          /*if (companyInfo.distanceFromUser != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                'Within ${companyInfo.distanceFromUser!.toStringAsFixed(1)} km of you',
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 16),
+                              const SizedBox(width: 2),
+                              Text(
+                                (reviews?.isNotEmpty ?? false)
+                                    ? (reviews!
+                                            .map((e) => e.reviewUserRating ?? 0)
+                                            .reduce((a, b) => a + b) /
+                                        reviews.length)
+                                        .toStringAsFixed(1)
+                                    : '0.0',
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w500),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '(${reviews?.length ?? 0})',
                                 style: const TextStyle(fontSize: 12, color: Colors.grey),
                               ),
-                            )
-                          else
-                            const Padding(
-                              padding: EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                'Location not available',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ),*/
-                            Flexible(
-                              child: (companyInfo.distanceFromUser != null)
-                                  ? Text(
-                                      'Within ${companyInfo.distanceFromUser!.toStringAsFixed(1)} km of you',
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                      overflow: TextOverflow.ellipsis,
-                                    )
-                                  : const Text(
-                                      'Location not available',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                            ),
-                            //THIS BLOCK ONLY FOR DEBUGGING
-                            if (companyInfo.rankScore != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2.0),
-                                child: Text(
-                                  'Rank Score: ${companyInfo.rankScore!.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
+                              if (companyInfo.isVerified)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 4.0),
+                                  child: Icon(Icons.verified, color: Colors.blue, size: 16),
                                 ),
-                              ),//ENDBLOCK
-                          Text(
-                            (reviews?.isNotEmpty ?? false)
-                                ? (reviews!
-                                        .map((e) => e.reviewUserRating ?? 0)
-                                        .reduce((a, b) => a + b) /
-                                    reviews.length)
-                                    .toStringAsFixed(1)
-                                : '0.0',
-                            style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w500),
+                            ],
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(height: 2),
                           Text(
-                            '(${reviews?.length ?? 0})',
+                            (companyInfo.distanceFromUser != null)
+                                ? 'Within ${companyInfo.distanceFromUser!.toStringAsFixed(1)} km of you'
+                                : 'Location not available',
                             style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                          if (companyInfo.isVerified)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 4.0),
-                              child: Icon(Icons.verified, color: Colors.blue, size: 16),
-                            ),
+                          //THIS BLOCK ONLY FOR DEBUGGING
+                          if (companyInfo.rankScore != null)
+                            Text(
+                              'Rank Score: ${companyInfo.rankScore!.toStringAsFixed(2)}',
+                              style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
+                            ),//ENDBLOCK
                         ],
                       ),
                     ],
@@ -249,69 +232,70 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 8),
             if (companyInfo.gigDescription != null &&
                 companyInfo.gigDescription!.isNotEmpty)
-              Text(
-                companyInfo.gigDescription!,
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  companyInfo.gigDescription!,
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      onPressed: () {
-                        Get.to(() => CompanyProfileCard(
-                              userId: userId,
-                              companyInfo: companyInfo,
-                              reviews: reviews,
-                              questionAnswerForm: questionAnswerForm,
-                            ),
-                            transition: Transition.cupertino);
-                      },
-                      child:
-                          const Text('View Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
+                    onPressed: () {
+                      Get.to(() => CompanyProfileCard(
+                            userId: userId,
+                            companyInfo: companyInfo,
+                            reviews: reviews,
+                            questionAnswerForm: questionAnswerForm,
+                          ),
+                          transition: Transition.cupertino);
+                    },
+                    child: const Text('View Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      onPressed: () async {
-                        // Fetch the full user document for the service provider
-                        final docSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-                        if (!docSnap.exists) return;
-                        final userModel = UserModel.fromFirestore(docSnap);
-                        final ChatController chatController = Get.put(ChatController());
-                        await chatController.initializeChat(FirebaseAuth.instance.currentUser!.uid, userModel.uid);
-                        // Send the auto message
-                        await chatController.sendMessage(
-                          'Hi, can you share details?',
-                          userModel.uid,
-                          context,
-                          userController.userModel.value?.userName ?? '',
-                          userModel.deviceToken ?? '',
-                          null,
-                        );
-                        // Navigate to chat screen
-                        Get.to(() => ChatScreen(userModel: userModel), transition: Transition.cupertino);
-                      },
-                      child: const Text('Request Quote', style: TextStyle(fontSize: 14, color: Colors.white)),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
+                    onPressed: () async {
+                      // Fetch the full user document for the service provider
+                      final docSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+                      if (!docSnap.exists) return;
+                      final userModel = UserModel.fromFirestore(docSnap);
+                      final ChatController chatController = Get.put(ChatController());
+                      await chatController.initializeChat(FirebaseAuth.instance.currentUser!.uid, userModel.uid);
+                      // Send the auto message
+                      await chatController.sendMessage(
+                        'Hi, can you share details?',
+                        userModel.uid,
+                        context,
+                        userController.userModel.value?.userName ?? '',
+                        userModel.deviceToken ?? '',
+                        null,
+                      );
+                      // Navigate to chat screen
+                      Get.to(() => ChatScreen(userModel: userModel), transition: Transition.cupertino);
+                    },
+                    child: const Text('Request Quote', style: TextStyle(fontSize: 14, color: Colors.white)),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -467,7 +451,7 @@ class _HomePageState extends State<HomePage> {
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.85,
+                        childAspectRatio: 0.75,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
