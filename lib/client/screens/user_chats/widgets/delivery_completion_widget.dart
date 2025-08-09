@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
-import '../../../controllers/user_chat/chats_controller.dart';
 import '../../../../data/keys.dart';
+import '../../../controllers/user_chat/chats_controller.dart';
 
 class DeliveryCompletionWidget extends StatelessWidget {
   final String messageId;
@@ -39,7 +39,7 @@ class DeliveryCompletionWidget extends StatelessWidget {
         final String status = data['status'] ?? 'pending';
         final bool autoAccepted = data['autoAccepted'] ?? false;
         final DateTime createdAt = (data['createdAt'] as Timestamp).toDate();
-        final DateTime autoAcceptDate = createdAt.add(const Duration(minutes: 2));
+        final DateTime autoAcceptDate = createdAt.add(const Duration(days: 3));
         final bool isExpired = DateTime.now().isAfter(autoAcceptDate);
         
         // Only check for auto-acceptance if status is still pending
@@ -136,102 +136,25 @@ class DeliveryCompletionWidget extends StatelessWidget {
                     ),
                   ),
                 if (status == 'accepted')
-                  FutureBuilder<String?>(
-                    future: _getCurrentOrderId(),
-                    builder: (context, orderIdSnapshot) {
-                      if (!orderIdSnapshot.hasData || orderIdSnapshot.data == null) {
-                        return Container(
-                          margin: const EdgeInsets.only(top: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: Colors.green, size: 14),
-                              const SizedBox(width: 4),
-                              const Expanded(
-                                child: Text(
-                                  'Delivery accepted. Payment will be released to provider in 2 minutes.',
-                                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      
-                      return StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('fund_holds')
-                            .doc(orderIdSnapshot.data!)
-                            .snapshots(),
-                        builder: (context, fundSnapshot) {
-                      String fundTimerText = 'Payment will be released to provider in 2 minutes.'; // Default text
-                      
-                      if (fundSnapshot.hasData && fundSnapshot.data!.exists) {
-                        final fundData = fundSnapshot.data!.data() as Map<String, dynamic>;
-                        final String fundStatus = fundData['status'] ?? 'pending';
-                        
-                        if (fundStatus == 'pending') {
-                          final DateTime payoutDate = DateTime.parse(fundData['payoutDate']);
-                          final Duration remaining = payoutDate.difference(DateTime.now());
-                          
-                          if (remaining.isNegative) {
-                            fundTimerText = 'Payment processing...';
-                          } else {
-                            fundTimerText = 'Payment will be released in: ${_formatFundHoldTime(remaining)}';
-                          }
-                        } else if (fundStatus == 'completed') {
-                          fundTimerText = 'Payment has been released to provider!';
-                        } else if (fundStatus == 'failed') {
-                          fundTimerText = 'Payment processing failed. Please contact support.';
-                        }
-                      }
-                      
-                      return Container(
+                  Container(
                     margin: const EdgeInsets.only(top: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: Colors.green, size: 14),
-                            const SizedBox(width: 4),
-                                Expanded(
-                              child: Text(
-                                    'Delivery accepted. $fundTimerText',
-                                    style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // TESTING: Add test button for triggering payout
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: ElevatedButton(
-                            onPressed: () => _testTriggerPayout(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              minimumSize: const Size(0, 24),
-                            ),
-                            child: const Text('TEST: Trigger Payout Now', style: TextStyle(fontSize: 10)),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.check_circle, color: Colors.green, size: 14),
+                        SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Delivery accepted.',
+                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
                           ),
                         ),
                       ],
                     ),
-                      );
-                        },
-                      );
-                    },
                   ),
                 if (status == 'declined')
                   Container(
@@ -303,86 +226,11 @@ class DeliveryCompletionWidget extends StatelessWidget {
     }
   }
 
-  String _formatFundHoldTime(Duration duration) {
-    if (duration.isNegative) {
-      return 'Processing...';
-    }
-    
-    final days = duration.inDays;
-    final hours = duration.inHours % 24;
-    final minutes = duration.inMinutes % 60;
-    final seconds = duration.inSeconds % 60;
+  // Removed fund hold countdown formatting (test-only)
 
-    if (days > 0) {
-      return '$days days, $hours hours';
-    } else if (hours > 0) {
-      return '$hours hours, $minutes minutes';
-    } else if (minutes > 0) {
-      return '$minutes minutes, $seconds seconds';
-    } else {
-      return '$seconds seconds';
-    }
-  }
+  // Removed helper to fetch current order id (test-only)
 
-  Future<String?> _getCurrentOrderId() async {
-    try {
-      final ordersQuery = await FirebaseFirestore.instance
-          .collection('custom_orders')
-          .where('providerId', isEqualTo: providerId)
-          .where('clientId', isEqualTo: clientId)
-          .where('status', isEqualTo: 'completed')
-          .get();
-
-      if (ordersQuery.docs.isNotEmpty) {
-        return ordersQuery.docs.first.id;
-      }
-      return null;
-    } catch (e) {
-      print('Error getting current order ID: $e');
-      return null;
-    }
-  }
-
-  // TESTING: Test button to trigger payout immediately
-  void _testTriggerPayout(BuildContext context) async {
-    try {
-      // Find the custom order for this chat
-      final ordersQuery = await FirebaseFirestore.instance
-          .collection('custom_orders')
-          .where('providerId', isEqualTo: providerId)
-          .where('clientId', isEqualTo: clientId)
-          .where('status', isEqualTo: 'completed')
-          .get();
-
-      if (ordersQuery.docs.isNotEmpty) {
-        final orderId = ordersQuery.docs.first.id;
-        print('[DeliveryCompletionWidget] TEST: Triggering payout for order: $orderId');
-        await _processPayout(orderId);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('TEST: Payout triggered successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('TEST: No completed order found for payout'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    } catch (e) {
-      print('[DeliveryCompletionWidget] TEST: Error triggering payout: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('TEST: Error triggering payout: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+  // Removed test payout trigger button and logic
 
   void _respondToDelivery(BuildContext context, String status) async {
     try {
@@ -396,7 +244,7 @@ class DeliveryCompletionWidget extends StatelessWidget {
 
       // Send auto message to provider
       final message = status == 'accepted' 
-          ? 'Delivery accepted. You will receive payment from platform in 2 minutes (testing mode).'
+          ? 'Delivery accepted.'
           : 'Delivery declined by client.';
       
       final chatController = Get.find<ChatController>();
@@ -409,7 +257,7 @@ class DeliveryCompletionWidget extends StatelessWidget {
         null,
       );
 
-      // If accepted, update custom order status and start fund hold timer
+      // If accepted, update custom order status
       if (status == 'accepted') {
         _updateOrderStatus();
       }
@@ -433,9 +281,9 @@ class DeliveryCompletionWidget extends StatelessWidget {
       final String status = data['status'] ?? 'pending';
       final bool autoAccepted = data['autoAccepted'] ?? false;
       final DateTime createdAt = (data['createdAt'] as Timestamp).toDate();
-      final DateTime autoAcceptDate = createdAt.add(const Duration(minutes: 2));
+      final DateTime autoAcceptDate = createdAt.add(const Duration(days: 3));
 
-      // If status is still pending and 2 minutes have passed, auto-accept
+      // If status is still pending and 3 days have passed, auto-accept
       if (status == 'pending' && !autoAccepted && DateTime.now().isAfter(autoAcceptDate)) {
         _autoAcceptDelivery();
       }
@@ -459,7 +307,7 @@ class DeliveryCompletionWidget extends StatelessWidget {
       });
 
       // Send auto message to provider with different text for auto-acceptance
-      final message = 'Delivery auto-accepted due to timeout. You will receive payment from platform in 2 minutes (testing mode).';
+      final message = 'Delivery auto-accepted due to timeout.';
       
       final chatController = Get.find<ChatController>();
       await chatController.sendMessage(
@@ -471,7 +319,7 @@ class DeliveryCompletionWidget extends StatelessWidget {
         null,
       );
 
-      // Update custom order status and start fund hold timer
+      // Update custom order status
       _updateOrderStatus();
     } catch (e) {
       print('Error auto-accepting delivery: $e');
@@ -498,10 +346,10 @@ class DeliveryCompletionWidget extends StatelessWidget {
           'completedDate': DateTime.now().toIso8601String(),
         });
 
-        // Start 14-day fund hold timer (TESTING: 1 minute for testing)
+        // Start 14-day fund hold timer and schedule payout
         await _startFundHoldTimer(orderId);
-        
-        print('[DeliveryCompletionWidget] Order status updated and fund hold timer started for order: $orderId');
+
+        print('[DeliveryCompletionWidget] Order status updated to completed and fund hold started for order: $orderId');
       }
     } catch (e) {
       print('Error updating order status: $e');
@@ -513,12 +361,10 @@ class DeliveryCompletionWidget extends StatelessWidget {
     try {
       print('[DeliveryCompletionWidget] Starting 14-day fund hold timer for order: $orderId');
       
-      // TESTING: Use 2 minutes instead of 14 days for testing
-      final Duration holdDuration = const Duration(minutes: 2); // TESTING: Change to Duration(days: 14) for production
-      
+      const Duration holdDuration = Duration(days: 14);
       final payoutDate = DateTime.now().add(holdDuration);
       
-      // Create a fund hold record
+      // Create or update the fund hold record
       await FirebaseFirestore.instance
           .collection('fund_holds')
           .doc(orderId)
@@ -527,11 +373,10 @@ class DeliveryCompletionWidget extends StatelessWidget {
         'startDate': DateTime.now().toIso8601String(),
         'payoutDate': payoutDate.toIso8601String(),
         'status': 'pending',
-        'holdDuration': holdDuration.inMinutes, // TESTING: Store in minutes for testing
-        'isTestMode': true, // TESTING: Flag to indicate test mode
+        'holdDurationDays': holdDuration.inDays,
       });
 
-      print('[DeliveryCompletionWidget] Fund hold timer started. Payout scheduled for: $payoutDate');
+      print('[DeliveryCompletionWidget] Fund hold started. Payout scheduled for: $payoutDate');
       
       // Schedule the payout
       _schedulePayout(orderId, payoutDate);
@@ -770,7 +615,7 @@ class DeliveryCompletionWidget extends StatelessWidget {
       final double providerEarnings = (orderData['providerEarnings'] as num).toDouble();
       final String providerId = orderData['providerId'];
       
-      final message = '🎉 Payment of \$${providerEarnings} has been transferred to your Stripe account! Your order is now completed.';
+      final message = 'Payment of \$${providerEarnings} has been transferred to your Stripe account. Your order is now completed.';
       
       final chatController = Get.find<ChatController>();
       await chatController.sendMessage(
