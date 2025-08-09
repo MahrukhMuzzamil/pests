@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pests247/client/screens/posted_leads/components/posted_lead_card.dart';
-import '../../../service_provider/screens/leads/components/widgets/build_lead_card.dart';
 import '../../controllers/posted_leads/posted_leads_controller.dart';
 import 'posted_lead_details_screen.dart';
 
@@ -18,8 +17,18 @@ class PostedLeadsScreen extends StatelessWidget {
         child: Column(
           children: [
             const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('Posted Leads', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Posted Leads', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 6),
+                  Text(
+                    'Review your requests and track provider responses. Tap a lead to see full details.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: Obx(() {
@@ -28,7 +37,12 @@ class PostedLeadsScreen extends StatelessWidget {
                 }
         
                 if (postedLeadsController.postedLeads.isEmpty) {
-                  return const Center(child: Text('No posted leads available.'));
+                  return const Center(
+                    child: Text(
+                      'No posted leads yet. Post a job from Home to get quotes from nearby providers.',
+                      textAlign: TextAlign.center,
+                    ),
+                  );
                 }
         
                 return RefreshIndicator(

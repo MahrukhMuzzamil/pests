@@ -56,52 +56,45 @@ class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
 
     return Scaffold(
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        switchInCurve: Curves.easeInOut,
-        switchOutCurve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          final offsetAnim = Tween<Offset>(
+            begin: const Offset(0.05, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+          final fadeAnim = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+          return FadeTransition(
+            opacity: fadeAnim,
+            child: SlideTransition(position: offsetAnim, child: child),
+          );
+        },
         child: _pages[_currentIndex],
       ),
       bottomNavigationBar: isLoggedIn
           ? Container(
         color: Colors.white,
         child: Padding(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
           child: SafeArea(
             child: GNav(
-              gap: 8,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 10),
+              gap: 6,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               activeColor: Colors.white,
               iconSize: 24,
-              tabBackgroundColor: Colors.blue,
+              tabBackgroundColor: Theme.of(context).colorScheme.primary,
               color: Colors.black,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               onTabChange: (value) {
                 setState(() {
                   _currentIndex = value;
                 });
               },
-               tabs: const [
-                GButton(
-                  icon: IconlyBold.home,
-                  text: '',
-                ),
-                GButton(
-                  icon: IconlyBold.chat,
-                  text: '',
-                ),
-                GButton(
-                  icon: IconlyBold.folder,
-                  text: '',
-                ),
-                 GButton(
-                   icon: IconlyBold.notification,
-                   text: '',
-                 ),
-                GButton(
-                  icon: IconlyBold.setting,
-                  text: '',
-                ),
+               tabs: [
+                GButton(icon: IconlyBold.home, text: MediaQuery.of(context).size.width > 360 ? 'Leads' : ''),
+                GButton(icon: IconlyBold.chat, text: MediaQuery.of(context).size.width > 360 ? 'Chats' : ''),
+                GButton(icon: IconlyBold.folder, text: MediaQuery.of(context).size.width > 360 ? 'Purchased' : ''),
+                 GButton(icon: IconlyBold.notification, text: MediaQuery.of(context).size.width > 360 ? 'Alerts' : ''),
+                GButton(icon: IconlyBold.setting, text: MediaQuery.of(context).size.width > 360 ? 'Profile' : ''),
               ],
             ),
           ),

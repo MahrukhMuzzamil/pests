@@ -20,6 +20,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../controllers/user_chat/chats_controller.dart';
 import '../../screens/user_chats/chat_screen.dart';
 import '../../../shared/models/user/user_model.dart';
+import '../../../shared/widgets/section_header.dart';
+import '../../../shared/widgets/animate_in.dart';
 // Add these imports if you use geolocator or similar for current location
 // removed unused imports
 
@@ -138,7 +140,7 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Row(
               children: [
@@ -184,13 +186,13 @@ class _HomePageState extends State<HomePage> {
                               const Icon(Icons.star, color: Colors.amber, size: 16),
                               const SizedBox(width: 2),
                               Text(
-                                (reviews != null && reviews.isNotEmpty)
-                                    ? (reviews
-                                            .map((e) => e.reviewUserRating ?? 0)
-                                            .reduce((a, b) => a + b) /
-                                        reviews.length)
-                                        .toStringAsFixed(1)
-                                    : '0.0',
+                              (reviews != null && reviews.isNotEmpty)
+                                  ? (reviews
+                                          .map((e) => e.reviewUserRating)
+                                          .reduce((a, b) => a + b) /
+                                      reviews.length)
+                                      .toStringAsFixed(1)
+                                  : '0.0',
                                 style: const TextStyle(
                                     fontSize: 13, fontWeight: FontWeight.w500),
                               ),
@@ -228,20 +230,21 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             if (companyInfo.gigDescription != null &&
                 companyInfo.gigDescription!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Text(
                   companyInfo.gigDescription!,
-                  style: const TextStyle(fontSize: 13, color: Colors.black87),
-                  maxLines: 2,
+                      style: const TextStyle(fontSize: 12.5, color: Colors.black87),
+                      maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            const Spacer(),
+            const SizedBox(height: 4),
             Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
                   width: double.infinity,
@@ -249,7 +252,9 @@ class _HomePageState extends State<HomePage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size.fromHeight(36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: () {
                       Get.to(() => CompanyProfileCard(
@@ -263,14 +268,16 @@ class _HomePageState extends State<HomePage> {
                     child: const Text('View Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size.fromHeight(36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     onPressed: () async {
                       // Fetch the full user document for the service provider
@@ -356,43 +363,22 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 10),
-              Padding(
-                padding:
-                    const EdgeInsets.only(left: 20.0, right: 10.0, bottom: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    if (homeController.highestRatedUser != null)
-                      Text(
-                        'Top Rated',
-                        style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black.withOpacity(.5)),
-                      ),
-                  ],
+              if (homeController.highestRatedUser != null)
+                const SectionHeader(
+                  title: 'Top Rated Provider',
+                  subtitle: 'Best reviewed provider based on recent orders',
                 ),
-              ),
               GetBuilder<HomeController>(
                 builder: (controller) {
-                  return UserProfileCard(
-                      highestRatedUser: controller.highestRatedUser);
+                  return AnimateIn(
+                    child: UserProfileCard(
+                        highestRatedUser: controller.highestRatedUser),
+                  );
                 },
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 10.0, top: 25),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Categories',
-                      style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black.withOpacity(.5)),
-                    ),
-                  ],
-                ),
+              const SectionHeader(
+                title: 'Categories',
+                subtitle: 'Select a service to get tailored quotes',
               ),
               homeController.services.isEmpty
                   ? const Center(child: Text('No services found.'))
@@ -423,15 +409,9 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
               const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0, right: 10.0),
-                child: Text(
-                  'Service Providers',
-                  style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black.withOpacity(.5)),
-                ),
+              const SectionHeader(
+                title: 'Service Providers',
+                subtitle: 'Ranked by reviews, proximity, and package',
               ),
               const SizedBox(height: 10),
               StreamBuilder<QuerySnapshot>(
@@ -468,9 +448,9 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.all(16),
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: 0.75,
+                        childAspectRatio: MediaQuery.of(context).size.height < 700 ? 0.58 : 0.64,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
@@ -489,19 +469,23 @@ class _HomePageState extends State<HomePage> {
                             : null;
                         final userId = doc.id;
 
-                        return GestureDetector(
-                          onTap: () {
-                            Get.to(
-                              () => CompanyProfileCard(
-                                userId: userId,
-                                companyInfo: companyInfo,
-                                reviews: reviews,
-                                questionAnswerForm: questionAnswerForm,
-                              ),
-                              transition: Transition.cupertino,
-                            );
-                          },
-                          child: _buildCompanyCard(companyInfo, reviews, questionAnswerForm, userId),
+                        return AnimateIn(
+                          beginOffset: const Offset(0, 0.12),
+                          beginScale: 0.96,
+                          child: GestureDetector(
+                            onTap: () {
+                              Get.to(
+                                () => CompanyProfileCard(
+                                  userId: userId,
+                                  companyInfo: companyInfo,
+                                  reviews: reviews,
+                                  questionAnswerForm: questionAnswerForm,
+                                ),
+                                transition: Transition.cupertino,
+                              );
+                            },
+                            child: _buildCompanyCard(companyInfo, reviews, questionAnswerForm, userId),
+                          ),
                         );
                       },
                     );

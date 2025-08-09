@@ -36,20 +36,23 @@ class BusinessGigCard extends StatelessWidget {
   final String? gigDescription;
   final String? gigImage;
   final bool isVerified;
+  final double elevation;
 
   const BusinessGigCard({
     required this.businessName,
     this.gigDescription,
     this.gigImage,
     this.isVerified = false,
+    this.elevation = 3,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 4,
+      elevation: elevation,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -65,6 +68,7 @@ class BusinessGigCard extends StatelessWidget {
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stack) => const CircleAvatar(radius: 30, child: Icon(Icons.business)),
                         ),
                       )
                     : const CircleAvatar(radius: 30, child: Icon(Icons.business)),
@@ -76,7 +80,7 @@ class BusinessGigCard extends StatelessWidget {
                   ),
                 ),
                 if (isVerified)
-                  const Icon(Icons.verified, color: Colors.blue, size: 28),
+                  const Icon(Icons.verified, color: Colors.blue, size: 22),
               ],
             ),
             const SizedBox(height: 12),

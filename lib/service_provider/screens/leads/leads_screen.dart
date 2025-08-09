@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -163,11 +162,27 @@ class _LeadsScreenState extends State<LeadsScreen> {
                   itemCount: leadsController.filteredLeads.length,
                   itemBuilder: (context, index) {
                     final lead = leadsController.filteredLeads[index];
-                    return LeadCard(
-                      lead: lead,
-                      isLoggedIn: isLoggedIn,
-                      isShown: false,
-                      status: '',
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.scale(
+                              scale: 0.98 + 0.02 * value,
+                              child: Transform.translate(
+                                offset: Offset(0, (1 - value) * 10),
+                                child: child,
+                              )),
+                        );
+                      },
+                      child: LeadCard(
+                        lead: lead,
+                        isLoggedIn: isLoggedIn,
+                        isShown: false,
+                        status: '',
+                      ),
                     );
                   },
                 ),

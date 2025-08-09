@@ -1,8 +1,8 @@
-import 'package:carousel_slider/carousel_slider.dart';
+// import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
+// import 'package:get/get.dart';
+// import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../service_provider/models/company_info/company_info_model.dart';
@@ -60,7 +60,7 @@ class _CompanyProfileCardState extends State<CompanyProfileCard> with SingleTick
   double calculateAverageRating() {
     if (widget.reviews == null || widget.reviews!.isEmpty) return 0.0;
     List<double> ratings = widget.reviews!
-        .map((review) => review.reviewUserRating.toDouble() ?? 0.0)
+        .map((review) => review.reviewUserRating.toDouble())
         .where((rating) => rating > 0)
         .toList();
     if (ratings.isEmpty) return 0.0;
@@ -74,7 +74,7 @@ class _CompanyProfileCardState extends State<CompanyProfileCard> with SingleTick
     final companyInfo = widget.companyInfo;
     final reviews = widget.reviews;
     final questionAnswerForm = widget.questionAnswerForm;
-    final userId = widget.userId;
+    // final userId = widget.userId; // currently unused in this view
 
     return Scaffold(
       appBar: AppBar(
@@ -105,7 +105,7 @@ class _CompanyProfileCardState extends State<CompanyProfileCard> with SingleTick
                   child: CircleAvatar(
                     radius: 40,
                     backgroundColor: Colors.grey[200],
-                    child: companyInfo?.logo != null && companyInfo!.logo!.isNotEmpty
+                    child: companyInfo?.logo != null && (companyInfo?.logo?.isNotEmpty ?? false)
                         ? ClipOval(
                             child: Image.network(
                               companyInfo!.logo!,
@@ -171,16 +171,30 @@ class _CompanyProfileCardState extends State<CompanyProfileCard> with SingleTick
                   separatorBuilder: (_, __) => const Divider(),
                   itemBuilder: (context, index) {
                     final review = reviews[index];
-                    return ListTile(
-                      leading: const Icon(Icons.person, color: Colors.blue),
-                      title: Text(review.reviewUserName ?? 'Unknown'),
-                      subtitle: Text(review.reviewUserText ?? 'No review'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star, color: Colors.amber, size: 18),
-                          Text('${review.reviewUserRating ?? 0}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, (1 - value) * 12),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: ListTile(
+                        leading: const Icon(Icons.person, color: Colors.blue),
+                        title: Text(review.reviewUserName),
+                        subtitle: Text(review.reviewUserText),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 18),
+                            Text('${review.reviewUserRating}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -207,7 +221,7 @@ class _CompanyProfileCardState extends State<CompanyProfileCard> with SingleTick
                 )
               : const Center(child: Text('No Q&A available.', style: TextStyle(fontSize: 16, color: Colors.black54))),
           // Certifications Tab
-          companyInfo?.certifications != null && companyInfo!.certifications!.isNotEmpty
+          companyInfo?.certifications != null && (companyInfo?.certifications?.isNotEmpty ?? false)
               ? ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
@@ -220,15 +234,15 @@ class _CompanyProfileCardState extends State<CompanyProfileCard> with SingleTick
                             child: Text(url, style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline, fontSize: 13)),
                           ),
                         )),
-                    if (companyInfo!.certificationStatus != null)
+                    if (companyInfo.certificationStatus != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4.0),
-                        child: Text('Status: ${companyInfo!.certificationStatus}', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                        child: Text('Status: ${companyInfo.certificationStatus}', style: TextStyle(fontSize: 12, color: Colors.black54)),
                       ),
-                    if (companyInfo!.adminComment != null && companyInfo!.adminComment!.isNotEmpty)
+                    if ((companyInfo.adminComment?.isNotEmpty ?? false))
                       Padding(
                         padding: const EdgeInsets.only(top: 2.0),
-                        child: Text('Admin: ${companyInfo!.adminComment}', style: TextStyle(fontSize: 12, color: Colors.redAccent)),
+                        child: Text('Admin: ${companyInfo.adminComment}', style: TextStyle(fontSize: 12, color: Colors.redAccent)),
                       ),
                   ],
                 )

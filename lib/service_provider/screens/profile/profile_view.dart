@@ -12,8 +12,6 @@ import 'components/about/user_info_screen.dart';
 import 'components/widgets/profile_image_card.dart';
 import 'package:pests247/service_provider/services/package_service.dart';
 import 'package:pests247/shared/models/package/package.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' as material;
@@ -58,7 +56,11 @@ class ProfileView extends StatelessWidget {
                   ),
                 ),
                 margin: const EdgeInsets.only(top: 40),
-                child: Column(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).padding.bottom + 140,
+                  ),
+                  child: Column(
                   children: [
                     const SizedBox(height: 65),
                     Obx(() {
@@ -118,6 +120,11 @@ class ProfileView extends StatelessWidget {
                               fontSize: 16,
                             ),
                           ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Buy credits to appear higher in search and unlock more leads.',
+                            style: TextStyle(color: Colors.black.withOpacity(0.6), fontSize: 12),
+                          ),
                           const SizedBox(height: 8),
                           StreamBuilder<List<Package>>(
                             stream: PackageService().getPackagesStream(),
@@ -132,17 +139,24 @@ class ProfileView extends StatelessWidget {
                               if (packages.isEmpty) {
                                 return const Text('No packages available.');
                               }
-                              return Column(
-                                children: packages.map((pkg) => material.Card(
-                                  // Use material.Card to avoid conflict with Stripe's Card
-                                  child: ListTile(
-                                    leading: pkg.isPopular
-                                        ? const Icon(Icons.star, color: Colors.orange)
-                                        : const Icon(Icons.credit_card),
-                                    title: Text('${pkg.credits} Credits'),
-                                    subtitle: Text(pkg.description.isNotEmpty ? pkg.description : 'No description'),
-                                    trailing: Text('\$${pkg.price.toStringAsFixed(2)}'),
-                                    onTap: () async {
+                              return ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: packages.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final pkg = packages[index];
+                                  return material.Card(
+                                    // Use material.Card to avoid conflict with Stripe's Card
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      leading: pkg.isPopular
+                                          ? const Icon(Icons.star, color: Colors.orange)
+                                          : const Icon(Icons.credit_card),
+                                      title: Text('${pkg.credits} Credits'),
+                                      subtitle: Text(pkg.description.isNotEmpty ? pkg.description : 'No description'),
+                                      trailing: Text('\$${pkg.price.toStringAsFixed(2)}'),
+                                      onTap: () async {
                                       final user = FirebaseAuth.instance.currentUser;
                                       if (user == null) {
                                         ScaffoldMessenger.of(context).showSnackBar(
@@ -171,9 +185,10 @@ class ProfileView extends StatelessWidget {
                                           SnackBar(content: Text('Payment failed or cancelled: $e')),
                                         );
                                       }
-                                    },
-                                  ),
-                                )).toList(),
+                                      },
+                                    ),
+                                  );
+                                },
                               );
                             },
                           ),
@@ -243,11 +258,7 @@ class ProfileView extends StatelessWidget {
                                     fontWeight: FontWeight.w100, fontSize: 14),
                               );
                             }),
-                            const SizedBox(height: 40),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              height: Get.height * .35,
-                            ),
+                            const SizedBox(height: 30),
                           ],
                         ),
                       ),
@@ -255,8 +266,12 @@ class ProfileView extends StatelessWidget {
                   ],
                 ),
               ),
-              ProfileImageCard(
-                image: userController.userModel.value?.profilePicUrl ?? '',
+              ),
+              Positioned(
+                top: 0,
+                child: ProfileImageCard(
+                  image: userController.userModel.value?.profilePicUrl ?? '',
+                ),
               ),
             ],
           ),

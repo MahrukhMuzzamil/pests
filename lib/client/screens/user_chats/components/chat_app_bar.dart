@@ -25,26 +25,28 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Row(
         children: [
-          GestureDetector(
-            child: Hero(
-              tag: userModel.userName + userModel.uid,
-              child: CircleAvatar(
-                radius: 22,
-                backgroundColor: Colors.grey.shade300,
-                backgroundImage: userModel.profilePicUrl != null &&
-                    userModel.profilePicUrl!.isNotEmpty
-                    ? NetworkImage(userModel.profilePicUrl as String)
-                    : null,
-                child: userModel.profilePicUrl == null
-                    ? const Icon(Icons.person, size: 20, color: Colors.black)
-                    : null,
-              ),
+          Hero(
+            tag: userModel.userName + userModel.uid,
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey.shade300,
+              backgroundImage: userModel.profilePicUrl != null &&
+                  userModel.profilePicUrl!.isNotEmpty
+                  ? NetworkImage(userModel.profilePicUrl as String)
+                  : null,
+              child: userModel.profilePicUrl == null
+                  ? const Icon(Icons.person, size: 18, color: Colors.black)
+                  : null,
             ),
           ),
-          const SizedBox(width: 15),
-          Text(
-            userModel.userName.toUpperCase(),
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              userModel.userName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+            ),
           ),
         ],
       ),
