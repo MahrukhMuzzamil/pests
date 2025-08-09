@@ -78,29 +78,31 @@ class CustomOfferWidget extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _respondToOffer(context, 'accepted'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          minimumSize: const Size(0, 28),
+                                              child: ElevatedButton(
+                          onPressed: () => _respondToOffer(context, 'accepted'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            minimumSize: const Size(0, 28),
+                            alignment: Alignment.center,
+                          ),
+                          child: const Text('Accept', style: TextStyle(fontSize: 11), textAlign: TextAlign.center),
                         ),
-                        child: const Text('Accept', style: TextStyle(fontSize: 11)),
-                      ),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => _respondToOffer(context, 'declined'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          minimumSize: const Size(0, 28),
+                                              child: ElevatedButton(
+                          onPressed: () => _respondToOffer(context, 'declined'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            minimumSize: const Size(0, 28),
+                            alignment: Alignment.center,
+                          ),
+                          child: const Text('Decline', style: TextStyle(fontSize: 11), textAlign: TextAlign.center),
                         ),
-                        child: const Text('Decline', style: TextStyle(fontSize: 11)),
-                      ),
                     ),
                   ],
                 ),
@@ -117,8 +119,9 @@ class CustomOfferWidget extends StatelessWidget {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       minimumSize: const Size(0, 28),
+                      alignment: Alignment.center,
                     ),
-                    child: const Text('Pay Now', style: TextStyle(fontSize: 11)),
+                    child: const Text('Pay Now', style: TextStyle(fontSize: 11), textAlign: TextAlign.center),
                   ),
                 ),
               ),

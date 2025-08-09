@@ -222,7 +222,18 @@ class ChatScreen extends StatelessWidget {
                 }),
                 // Show Send Custom Offer button for service providers
                 if (userController.accountType == 'serviceProvider')
-                  Padding(
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('chat_room')
+                        .doc(chatController.chatRoomId)
+                        .collection('custom_offers')
+                        .where('status', isEqualTo: 'paid')
+                        .limit(1)
+                        .snapshots(),
+                    builder: (context, offerSnapshot) {
+                      final bool hasCompletedOrder = offerSnapshot.hasData && offerSnapshot.data!.docs.isNotEmpty;
+                      
+                      return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     child: Row(
                       children: [
@@ -237,22 +248,36 @@ class ChatScreen extends StatelessWidget {
                                 ),
                               );
                             },
-                            child: const Text('Send Custom Offer'),
+                                style: ElevatedButton.styleFrom(
+                                  alignment: Alignment.center,
+                                ),
+                                child: const Text(
+                                  'Send Custom Offer',
+                                  textAlign: TextAlign.center,
+                                ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => _sendDeliveryCompletedMessage(context),
+                                onPressed: hasCompletedOrder 
+                                    ? () => _sendDeliveryCompletedMessage(context)
+                                    : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
+                                  backgroundColor: hasCompletedOrder ? Colors.green : Colors.grey,
                               foregroundColor: Colors.white,
+                                  alignment: Alignment.center,
+                                ),
+                                child: const Text(
+                                  'Delivery Completed',
+                                  textAlign: TextAlign.center,
                             ),
-                            child: const Text('Delivery Completed'),
                           ),
                         ),
                       ],
                     ),
+                      );
+                    },
                   ),
                 buildMessageInput(context),
               ],
