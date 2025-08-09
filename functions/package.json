@@ -1,0 +1,20 @@
+{
+  "name": "pests247-functions",
+  "scripts": {
+    "build": "echo 'no build'",
+    "lint": "echo 'no lint'",
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.0",
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.0.1"
+  }
+}

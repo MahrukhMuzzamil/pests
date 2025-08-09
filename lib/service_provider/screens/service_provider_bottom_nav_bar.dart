@@ -9,6 +9,7 @@ import '../../client/controllers/user/user_controller.dart';
 import '../../service_provider/screens/profile/profile_view.dart';
 import '../../shared/controllers/app/app_controller.dart';
 import 'leads/leads_screen.dart';
+import 'job_alerts/job_alerts_screen.dart';
 
 class ServiceProviderBottomNavBar extends StatefulWidget {
   const ServiceProviderBottomNavBar({super.key});
@@ -18,7 +19,7 @@ class ServiceProviderBottomNavBar extends StatefulWidget {
 }
 
 class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
-  int _currentIndex = 0;
+     int _currentIndex = 0; // 0: Leads, 1: Chat, 2: Purchased, 3: Alerts, 4: Profile
   bool isLoggedIn = false;
 
   @override
@@ -38,6 +39,7 @@ class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
     const LeadsScreen(),
     const Chat(),
     const PurchasedLeadsScreen(),
+    const JobAlertsScreen(),
     const ProfileView(),
   ];
 
@@ -71,24 +73,28 @@ class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
                   _currentIndex = value;
                 });
               },
-              tabs: const [
-                GButton(
-                  icon: IconlyBold.home,
-                  text: '',
-                ),
-                GButton(
-                  icon: IconlyBold.chat,
-                  text: '',
-                ),
-                GButton(
-                  icon: IconlyBold.folder,
-                  text: '',
-                ),
-                GButton(
-                  icon: IconlyBold.setting,
-                  text: '',
-                ),
-              ],
+                             tabs: const [
+                 GButton(
+                   icon: IconlyBold.home,
+                   text: '',
+                 ),
+                 GButton(
+                   icon: IconlyBold.chat,
+                   text: '',
+                 ),
+                 GButton(
+                   icon: IconlyBold.folder,
+                   text: '',
+                 ),
+                 GButton(
+                   icon: IconlyBold.notification,
+                   text: '',
+                 ),
+                 GButton(
+                   icon: IconlyBold.setting,
+                   text: '',
+                 ),
+               ],
             ),
           ),
         ),

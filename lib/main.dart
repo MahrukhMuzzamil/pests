@@ -10,6 +10,7 @@ import 'client/widgets/colors.dart';
 import 'firebase_options.dart';
 import 'service_provider/screens/service_provider_bottom_nav_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
