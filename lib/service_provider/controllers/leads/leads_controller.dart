@@ -13,6 +13,7 @@ import '../../../client/widgets/custom_snackbar.dart';
 import '../../../shared/models/lead_model/lead_model.dart';
 import '../../../shared/models/user/user_model.dart';
 import '../../models/buyer/buyer_model.dart';
+import '../../../data/keys.dart';
 
 class LeadsController extends GetxController {
   var leads = <LeadModel>[].obs;
@@ -43,7 +44,9 @@ class LeadsController extends GetxController {
     '3 hour',
   ];
 
-  String apiKey = 'd8ac2514431e41f6b8cd50038c8c63b6';
+  String get apiKey => Keys.geoApifyKey.isNotEmpty
+      ? Keys.geoApifyKey
+      : 'd8ac2514431e41f6b8cd50038c8c63b6'; // fallback if not loaded
 
   // Retrieve coordinates from a postal code
   Future<Map<String, double>> getCoordinatesFromPostalCode(String postalCode) async {
@@ -123,10 +126,23 @@ class LeadsController extends GetxController {
         return;
       }
 
-      leads.value = snapshot.docs.map((doc) {
-        print("Lead Document: ${doc.data()}");
-        return LeadModel.fromMap(doc.data()!);
-      }).where((lead) => lead.status != 'maxedOut').toList();
+      final parsed = <LeadModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          // Ignore non-lead stray docs (e.g., accidental job/gig writes)
+          if (data['leadId'] == null || data['submittedAt'] == null || data['location'] == null) {
+            continue;
+          }
+          final lead = LeadModel.fromMap(data);
+          if (lead.status != 'maxedOut') parsed.add(lead);
+        } catch (e) {
+          // Skip malformed document
+          print('Skipping malformed lead ${doc.id}: $e');
+          continue;
+        }
+      }
+      leads.value = parsed;
 
       print("Total leads fetched after filtering 'maxedOut': ${leads.length}");
 
@@ -154,51 +170,81 @@ class LeadsController extends GetxController {
       for (var leadLocation in user.leadLocations!) {
         if (leadLocation['postalCode'] == null) continue;
 
-        final leadSettingCoords = await getCoordinatesFromPostalCode(leadLocation['postalCode']);
+        Map<String, double> leadSettingCoords;
+        try {
+          leadSettingCoords = await getCoordinatesFromPostalCode(leadLocation['postalCode']);
+        } catch (_) {
+          // If geocoding fails for this location, skip filtering by it
+          continue;
+        }
         print("Lead location coordinates for ${leadLocation['postalCode']}: $leadSettingCoords");
 
         for (var lead in leads) {
           print("Inspecting lead: ${lead.toMap()}");
 
-          var postalCode = _extractPostalCode(lead.location);
-          final leadCoords = await getCoordinatesFromPostalCode(postalCode);
-          final distance = calculateDistance(
-              leadSettingCoords['lat']!, leadSettingCoords['lon']!,
-              leadCoords['lat']!, leadCoords['lon']!
-          );
+          try {
+            var postalCode = _extractPostalCode(lead.location);
+            final leadCoords = await getCoordinatesFromPostalCode(postalCode);
+            final distance = calculateDistance(
+                leadSettingCoords['lat']!, leadSettingCoords['lon']!,
+                leadCoords['lat']!, leadCoords['lon']!
+            );
 
-          print("Distance from user location to lead ${lead.leadId}: $distance");
+            print("Distance from user location to lead ${lead.leadId}: $distance");
 
-          bool matchesCriteria = false;
+            bool matchesCriteria = false;
 
-          if (leadLocation.containsKey('hours') && leadLocation['driveTime'] != null) {
-            String maxTime = leadLocation['driveTime'];
-            if (await withinDriveTime(leadSettingCoords, leadCoords, maxTime)) {
+            final dynamic hoursVal = leadLocation.containsKey('hours')
+                ? leadLocation['hours']
+                : leadLocation['driveTime']; // backward compat
+            final bool hasHours = hoursVal != null && hoursVal.toString().trim().isNotEmpty;
+
+            if (hasHours) {
+              String maxTime = hoursVal.toString();
+              if (await withinDriveTime(leadSettingCoords, leadCoords, maxTime)) {
+                matchesCriteria = true;
+                print("Lead ${lead.leadId} matches time criteria.");
+              }
+            } else if (leadLocation.containsKey('miles') && leadLocation['miles'] != null) {
+              double maxMiles = double.tryParse(leadLocation['miles'].toString()) ?? 0;
+              if (maxMiles > 0 && distance <= maxMiles) {
+                matchesCriteria = true;
+                print("Lead ${lead.leadId} matches distance criteria.");
+              }
+            } else {
+              // If no valid filter present, include lead by default for this location
               matchesCriteria = true;
-              print("Lead ${lead.leadId} matches time criteria.");
             }
-          } else {
-            double maxMiles = double.parse(leadLocation['miles']);
-            if (distance <= maxMiles) {
-              matchesCriteria = true;
-              print("Lead ${lead.leadId} matches distance criteria.");
-            }
-          }
 
-          if (matchesCriteria) {
-            filteredLeads.add(lead);
-            print("Adding lead ${lead.leadId} to filtered leads.");
-          } else {
-            print("Lead ${lead.leadId} does not match criteria.");
+            if (matchesCriteria) {
+              filteredLeads.add(lead);
+              print("Adding lead ${lead.leadId} to filtered leads.");
+            } else {
+              print("Lead ${lead.leadId} does not match criteria.");
+            }
+          } catch (e) {
+            // On per-lead failure, just continue
+            print("Error evaluating lead ${lead.leadId}: $e");
+            continue;
           }
         }
       }
 
       sortFilteredLeads();
+      if (filteredLeads.isEmpty && leads.isNotEmpty) {
+        // Last-resort fallback: show all leads
+        filteredLeads.value = List.from(leads);
+        sortFilteredLeads();
+      }
       print("Filtered leads count: ${filteredLeads.length}");
 
     } catch (e) {
       print("Error filtering leads: $e");
+      // Fallback: show all available leads if filtering fails
+      try {
+        filteredLeads.value = leads;
+        sortFilteredLeads();
+      } catch (_) {}
     } finally {
       isLoading.value = false;
     }
@@ -217,9 +263,19 @@ class LeadsController extends GetxController {
       }
 
       // Map Firestore documents directly to LeadModel and update filteredLeads
-      filteredLeads.value = snapshot.docs
-          .map((doc) => LeadModel.fromMap(doc.data()!))
-          .toList();
+      final all = <LeadModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          if (data['leadId'] == null || data['submittedAt'] == null || data['location'] == null) {
+            continue;
+          }
+          all.add(LeadModel.fromMap(data));
+        } catch (e) {
+          print('Skipping malformed lead ${doc.id}: $e');
+        }
+      }
+      filteredLeads.value = all;
 
       print("Total leads fetched: ${filteredLeads.length}");
     } catch (e) {
@@ -256,7 +312,9 @@ class LeadsController extends GetxController {
       print("Response from Geoapify API: $data");
 
       final durationSeconds = data['features'][0]['properties']['time'];
-      final maxTimeHours = int.parse(maxDriveTime.split(' ')[0]);
+      // Accept values like "1", "1h", "1 hour", "1.5 hours"
+      final token = maxDriveTime.split(' ').first.replaceAll(RegExp(r'[^0-9\.]'), '');
+      final maxTimeHours = double.tryParse(token) ?? 0.0;
 
       // Calculate if within drive time
       bool isWithinDriveTime = (durationSeconds / 3600) <= maxTimeHours;

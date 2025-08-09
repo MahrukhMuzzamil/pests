@@ -40,6 +40,8 @@ class GeocodingService {
             'state': resultMap['state']?.toString() ?? '',
             'country': resultMap['country']?.toString() ?? '',
             'postalCode': resultMap['postcode']?.toString() ?? '',
+            'latitude': (resultMap['lat']?.toString() ?? ''),
+            'longitude': (resultMap['lon']?.toString() ?? ''),
           };
         }).toList();
 

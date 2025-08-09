@@ -9,6 +9,7 @@ import '../../client/controllers/user/user_controller.dart';
 import '../../service_provider/screens/profile/profile_view.dart';
 import '../../shared/controllers/app/app_controller.dart';
 import 'leads/leads_screen.dart';
+import 'job_alerts/job_alerts_screen.dart';
 
 class ServiceProviderBottomNavBar extends StatefulWidget {
   const ServiceProviderBottomNavBar({super.key});
@@ -20,10 +21,14 @@ class ServiceProviderBottomNavBar extends StatefulWidget {
 class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
   int _currentIndex = 0;
   bool isLoggedIn = false;
+  late final UserController userController;
 
   @override
   void initState() {
     super.initState();
+    userController = Get.isRegistered<UserController>()
+        ? Get.find<UserController>()
+        : Get.put(UserController());
     _checkLoginStatus();
   }
 
@@ -34,12 +39,17 @@ class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
     });
   }
 
-  final List<Widget> _pages = [
-    const LeadsScreen(),
-    const Chat(),
-    const PurchasedLeadsScreen(),
-    const ProfileView(),
-  ];
+  List<Widget> get _pages => [
+        const LeadsScreen(),
+        const Chat(),
+        const PurchasedLeadsScreen(),
+        // Job alerts requires provider coordinates. If unavailable, default to 0,0 which yields empty list.
+        JobAlertsScreen(
+          providerLatitude: userController.userModel.value?.companyInfo?.latitude ?? 0,
+          providerLongitude: userController.userModel.value?.companyInfo?.longitude ?? 0,
+        ),
+        const ProfileView(),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +81,7 @@ class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
                   _currentIndex = value;
                 });
               },
-              tabs: const [
+               tabs: const [
                 GButton(
                   icon: IconlyBold.home,
                   text: '',
@@ -84,6 +94,10 @@ class _BottomNavBarState extends State<ServiceProviderBottomNavBar> {
                   icon: IconlyBold.folder,
                   text: '',
                 ),
+                 GButton(
+                   icon: IconlyBold.notification,
+                   text: '',
+                 ),
                 GButton(
                   icon: IconlyBold.setting,
                   text: '',

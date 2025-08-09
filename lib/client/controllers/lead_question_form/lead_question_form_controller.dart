@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pests247/client/controllers/home/home_controller.dart';
 import '../../../shared/models/lead_model/lead_model.dart';
+import '../../../shared/models/job/job_post.dart';
+import '../../../services/job_board_service.dart';
 import '../../widgets/custom_snackbar.dart';
 import 'package:uuid/uuid.dart';
 
@@ -177,6 +178,30 @@ class LeadsFormController extends GetxController {
           .collection('leads')
           .doc(uniqueLeadId)
           .set(lead.toMap());
+
+      // Also create a lightweight job post for providers (Bark-like alert)
+      try {
+        final postal = _extractPostalCode(location.value);
+        List<Map<String, String>> locs = await geocodingService.getCityAndCountry(postal);
+        final loc = locs.isNotEmpty ? locs.first : {};
+        final job = JobPost(
+          id: uniqueLeadId,
+          createdBy: userId.value,
+          title: selectedServices.isNotEmpty ? selectedServices.first : 'Pest Control Job',
+          description: additionalDetails.value,
+          postalCode: postal,
+          city: loc['city'],
+          state: loc['state'],
+          latitude: double.tryParse(loc['latitude'] ?? '') ?? 0.0,
+          longitude: double.tryParse(loc['longitude'] ?? '') ?? 0.0,
+          services: selectedServices.toList(),
+          pests: selectedPests.toList(),
+          createdAt: DateTime.now(),
+        );
+        await JobBoardService.createJob(job);
+      } catch (_) {
+        // ignore job creation errors so lead flow isn't blocked
+      }
     } catch (e) {
       CustomSnackbar.showSnackBar(
         'Error',
@@ -187,6 +212,11 @@ class LeadsFormController extends GetxController {
       );
       print(e.toString());
     }
+  }
+
+  String _extractPostalCode(String location) {
+    // Expecting formats like "12345, City, State" or "A1A 1A1, City, Province"
+    return location.split(',').first.trim();
   }
 
 

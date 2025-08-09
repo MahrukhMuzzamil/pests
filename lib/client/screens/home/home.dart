@@ -2,13 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pests247/client/screens/lead_questions_form/lead_form_screen.dart';
-import 'package:pests247/client/screens/on_board/start.dart';
-import 'package:pests247/client/widgets/custom_snackbar.dart';
+// removed unused imports
 import 'package:pests247/services/notification_services.dart';
 import '../../../shared/controllers/app/app_controller.dart';
 import '../../controllers/home/home_controller.dart';
 import '../../controllers/user/user_controller.dart';
-import '../../widgets/custom_text_field.dart';
+// removed unused imports
 import 'components/user_profile_card.dart';
 import 'components/widgets/build_images_container.dart';
 import 'components/widgets/build_shimmer_card.dart';
@@ -22,7 +21,7 @@ import '../../controllers/user_chat/chats_controller.dart';
 import '../../screens/user_chats/chat_screen.dart';
 import '../../../shared/models/user/user_model.dart';
 // Add these imports if you use geolocator or similar for current location
-import 'package:geolocator/geolocator.dart';
+// removed unused imports
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -219,8 +218,8 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),//ENDBLOCK
                           Text(
-                            (reviews?.isNotEmpty ?? false)
-                                ? (reviews!
+                            (reviews != null && reviews.isNotEmpty)
+                                ? (reviews
                                         .map((e) => e.reviewUserRating ?? 0)
                                         .reduce((a, b) => a + b) /
                                     reviews.length)
@@ -231,7 +230,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '(${reviews?.length ?? 0})',
+                            '(${reviews != null ? reviews.length : 0})',
                             style: const TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           if (companyInfo.isVerified)
@@ -353,6 +352,26 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             children: [
               const SizedBox(height: 30),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () {
+                      Get.to(() => LeadFormScreen(), transition: Transition.cupertino);
+                    },
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Post a Job'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
               Padding(
                 padding:
                     const EdgeInsets.only(left: 20.0, right: 10.0, bottom: 20),

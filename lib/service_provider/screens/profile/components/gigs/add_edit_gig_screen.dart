@@ -122,13 +122,7 @@ class _AddEditGigScreenState extends State<AddEditGigScreen> {
       } else {
         await gigCollection.add(gigData);
       }
-      await FirebaseFirestore.instance.collection('leads').add({
-        'title': _titleController.text,
-        'description': _descriptionController.text,
-        'latitude': 0.0, // Replace with actual latitude
-        'longitude': 0.0, // Replace with actual longitude
-        // ...other fields...
-      });
+      // Do NOT write to leads here. Leads are client-submitted; gigs live under user subcollection.
       Get.back();
     } catch (e) {
       Get.snackbar('Error', 'Failed to save gig: $e');
