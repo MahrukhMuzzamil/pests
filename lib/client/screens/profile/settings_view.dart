@@ -6,9 +6,7 @@ import 'package:pests247/client/screens/profile/components/about/user_info_scree
 import 'package:pests247/client/screens/profile/components/change_password/change_password_screen.dart';
 import 'package:pests247/client/screens/profile/components/delete_account/delete_account_screen.dart';
 import 'package:pests247/client/screens/profile/components/support/support_screen.dart';
-import 'package:pests247/service_provider/screens/profile/components/change_password/change_password_screen.dart';
-import 'package:pests247/service_provider/screens/profile/components/delete_account/delete_account_screen.dart';
-import 'package:pests247/service_provider/screens/profile/components/support/support_screen.dart';
+// removed unused service_provider imports
 import '../../../client/widgets/custom_icon_button.dart';
 import '../../controllers/home/home_controller.dart';
 import 'components/widgets/setting_tile.dart';
@@ -47,6 +45,50 @@ class _SettingsViewState extends State<ClientSettingsView> {
           children: [
             // Account Settings Section
             _buildSectionHeader('Account'),
+            ClientSettingTile(
+              leadingIcon: const Icon(Icons.privacy_tip_outlined),
+              title: 'Privacy Policy',
+              subtitle: 'How we handle your data',
+              onTap: () {
+                Get.to(() => const _StaticPolicyScreen(
+                      title: 'Privacy Policy',
+                      assetPath: 'assets/policies/privacy.md',
+                    ));
+              },
+            ),
+            ClientSettingTile(
+              leadingIcon: const Icon(Icons.description_outlined),
+              title: 'Terms of Service',
+              subtitle: 'Your agreement with us',
+              onTap: () {
+                Get.to(() => const _StaticPolicyScreen(
+                      title: 'Terms of Service',
+                      assetPath: 'assets/policies/tos.md',
+                    ));
+              },
+            ),
+            ClientSettingTile(
+              leadingIcon: const Icon(Icons.privacy_tip_outlined),
+              title: 'Privacy Policy',
+              subtitle: 'How we handle your data',
+              onTap: () {
+                Get.to(() => const _StaticPolicyScreen(
+                      title: 'Privacy Policy',
+                      assetPath: 'assets/policies/privacy.md',
+                    ));
+              },
+            ),
+            ClientSettingTile(
+              leadingIcon: const Icon(Icons.description_outlined),
+              title: 'Terms of Service',
+              subtitle: 'Your agreement with us',
+              onTap: () {
+                Get.to(() => const _StaticPolicyScreen(
+                      title: 'Terms of Service',
+                      assetPath: 'assets/policies/tos.md',
+                    ));
+              },
+            ),
             ClientSettingTile(
               leadingIcon: const Icon(FontAwesomeIcons.user),
               title: 'About',
@@ -114,6 +156,31 @@ class _SettingsViewState extends State<ClientSettingsView> {
           fontWeight: FontWeight.bold,
           color: Colors.blue.withOpacity(.8),
         ),
+      ),
+    );
+  }
+}
+
+class _StaticPolicyScreen extends StatelessWidget {
+  final String title;
+  final String assetPath;
+  const _StaticPolicyScreen({required this.title, required this.assetPath});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: FutureBuilder<String>(
+        future: DefaultAssetBundle.of(context).loadString(assetPath),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Text(snapshot.data ?? ''),
+          );
+        },
       ),
     );
   }
