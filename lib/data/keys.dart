@@ -6,6 +6,8 @@ class Keys {
   static String postalCodeApiKey = "";
   static String stripeSecretKey = "";
   static String stripePublishKey = "";
+  static String fcmProjectId = "";
+  static Map<String, dynamic> fcmServiceAccount = <String, dynamic>{};
 
   /// Load all keys from Firebase
   static Future<void> loadAllKeys() async {
@@ -22,6 +24,20 @@ class Keys {
           postalCodeApiKey = data['postalCodeApiKey'] ?? "";
           stripePublishKey = data['stripePublishKey'] ?? "";
           stripeSecretKey = data['stripeSecretKey'] ?? "";
+          // FCM keys
+          fcmProjectId = data['fcmProjectId'] ?? "";
+          final dynamic sa = data['fcmServiceAccount'];
+          if (sa is Map<String, dynamic>) {
+            // Normalize private key newlines if stored with escaped \n
+            final Map<String, dynamic> normalized = Map<String, dynamic>.from(sa);
+            final dynamic pk = normalized['private_key'];
+            if (pk is String && pk.contains('\\n')) {
+              normalized['private_key'] = pk.replaceAll('\\n', '\n');
+            }
+            fcmServiceAccount = normalized;
+          } else {
+            fcmServiceAccount = <String, dynamic>{};
+          }
           Stripe.publishableKey = stripePublishKey;
           print("Keys loaded successfully:");
         } else {
