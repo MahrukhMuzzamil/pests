@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pests247/client/screens/lead_questions_form/lead_form_screen.dart';
+// import 'package:pests247/client/screens/lead_questions_form/lead_form_screen.dart';
 // removed unused imports
 import 'package:pests247/services/notification_services.dart';
 import '../../../shared/controllers/app/app_controller.dart';
@@ -20,8 +20,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../controllers/user_chat/chats_controller.dart';
 import '../../screens/user_chats/chat_screen.dart';
 import '../../../shared/models/user/user_model.dart';
+import '../../../shared/controllers/service_base_rate_controller.dart';
 import '../../../shared/widgets/section_header.dart';
 import '../../../shared/widgets/animate_in.dart';
+import '../search/search_providers.dart';
 // Add these imports if you use geolocator or similar for current location
 // removed unused imports
 
@@ -36,6 +38,11 @@ class _HomePageState extends State<HomePage> {
   late HomeController homeController;
   late UserController userController;
   bool isLoggedIn = false;
+  // Filter states
+  bool showVerifiedOnly = false;
+  double minRating = 0.0;
+  bool nearMeOnly = false;
+  String selectedCategory = 'All';
 
   @override
   void initState() {
@@ -61,6 +68,183 @@ class _HomePageState extends State<HomePage> {
       print('Location permission denied');
     }
   }
+
+  Widget _buildHeroBanner(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Container
+      (
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [Theme.of(context).colorScheme.primary.withOpacity(0.1), Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(CupertinoIcons.sparkles, color: Theme.of(context).colorScheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Smarter matches, faster quotes',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'We rank businesses using ratings, distance, and premium package so you see the best options first.',
+                    style: TextStyle(color: Colors.black54, height: 1.2),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          FilterChip(
+            label: const Text('All'),
+            selected: true,
+            onSelected: (_) => _showFilterSheet(),
+            avatar: const Icon(Icons.filter_list, size: 16),
+          ),
+          const SizedBox(width: 8),
+          if (showVerifiedOnly)
+            FilterChip(
+              label: const Text('Verified'),
+              selected: true,
+              onSelected: (_) => setState(() => showVerifiedOnly = false),
+              deleteIcon: const Icon(Icons.close, size: 16),
+            ),
+          if (minRating > 0)
+            FilterChip(
+              label: Text('${minRating.toStringAsFixed(1)}+ stars'),
+              selected: true,
+              onSelected: (_) => setState(() => minRating = 0.0),
+              deleteIcon: const Icon(Icons.close, size: 16),
+            ),
+          if (nearMeOnly)
+            FilterChip(
+              label: const Text('Near me'),
+              selected: true,
+              onSelected: (_) => setState(() => nearMeOnly = false),
+              deleteIcon: const Icon(Icons.close, size: 16),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Filters', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              
+              // Verified filter
+              SwitchListTile(
+                title: const Text('Verified providers only'),
+                subtitle: const Text('Show only verified service providers'),
+                value: showVerifiedOnly,
+                onChanged: (value) => setModalState(() => showVerifiedOnly = value),
+              ),
+              
+              // Rating filter
+              const Text('Minimum Rating', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: minRating,
+                      min: 0.0,
+                      max: 5.0,
+                      divisions: 10,
+                      label: minRating.toStringAsFixed(1),
+                      onChanged: (value) => setModalState(() => minRating = value),
+                    ),
+                  ),
+                  Text('${minRating.toStringAsFixed(1)}+', style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+              
+              // Distance filter
+              SwitchListTile(
+                title: const Text('Near me only'),
+                subtitle: const Text('Show providers within 50km'),
+                value: nearMeOnly,
+                onChanged: (value) => setModalState(() => nearMeOnly = value),
+              ),
+              
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setModalState(() {
+                          showVerifiedOnly = false;
+                          minRating = 0.0;
+                          nearMeOnly = false;
+                        });
+                      },
+                      child: const Text('Clear All'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {});
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Apply'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
 
   void _checkLoginStatus() async {
@@ -131,181 +315,176 @@ class _HomePageState extends State<HomePage> {
     }
 
 
-  Widget _buildCompanyCard(CompanyInfo companyInfo, List<Reviews>? reviews,
+  Widget _buildCompanyListTile(CompanyInfo companyInfo, List<Reviews>? reviews,
       QuestionAnswerForm? questionAnswerForm, String userId) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: companyInfo.gigImage != null && companyInfo.gigImage!.isNotEmpty
-                      ? Image.network(
-                          companyInfo.gigImage!,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const CircleAvatar(radius: 24, child: Icon(Icons.business)),
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const SizedBox(
-                              width: 48,
-                              height: 48,
-                              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                            );
-                          },
-                        )
-                      : const CircleAvatar(radius: 24, child: Icon(Icons.business)),
+    final double rating = (reviews != null && reviews.isNotEmpty)
+        ? (reviews.map((e) => e.reviewUserRating).reduce((a, b) => a + b) / reviews.length)
+        : 0.0;
+
+    return FutureBuilder<double?>(
+      future: ServiceBaseRateController.getMinPriceForCategory(companyInfo.name ?? ''),
+      builder: (context, snap) {
+        final minPrice = snap.data;
+        return Card(
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              Get.to(
+                () => CompanyProfileCard(
+                  userId: userId,
+                  companyInfo: companyInfo,
+                  reviews: reviews,
+                  questionAnswerForm: questionAnswerForm,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        companyInfo.name ?? '',
-                        style:
-                            const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 16),
-                              const SizedBox(width: 2),
-                              Text(
-                              (reviews != null && reviews.isNotEmpty)
-                                  ? (reviews
-                                          .map((e) => e.reviewUserRating)
-                                          .reduce((a, b) => a + b) /
-                                      reviews.length)
-                                      .toStringAsFixed(1)
-                                  : '0.0',
-                                style: const TextStyle(
-                                    fontSize: 13, fontWeight: FontWeight.w500),
+                transition: Transition.cupertino,
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Builder(
+                      builder: (context) {
+                        final String? gig = companyInfo.gigImage;
+                        final String? logo = companyInfo.logo;
+                        if (gig != null && gig.isNotEmpty) {
+                          return Image.network(
+                            gig,
+                            width: 96,
+                            height: 72,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              if (logo != null && logo.isNotEmpty) {
+                                return Image.network(logo, width: 96, height: 72, fit: BoxFit.cover);
+                              }
+                              return Image.asset('assets/images/service_provider.png', width: 96, height: 72, fit: BoxFit.cover);
+                            },
+                          );
+                        }
+                        if (logo != null && logo.isNotEmpty) {
+                          return Image.network(logo, width: 96, height: 72, fit: BoxFit.cover);
+                        }
+                        return Image.asset('assets/images/service_provider.png', width: 96, height: 72, fit: BoxFit.cover);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 18),
+                            const SizedBox(width: 4),
+                            Text(rating.toStringAsFixed(1),
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                            const SizedBox(width: 4),
+                            Text('(${reviews?.length ?? 0})',
+                                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            if (companyInfo.isVerified)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 6.0),
+                                child: Icon(Icons.verified, color: Colors.blue, size: 16),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '(${reviews != null ? reviews.length : 0})',
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          companyInfo.gigDescription ?? companyInfo.name ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                (companyInfo.distanceFromUser != null)
+                                    ? 'Within ${companyInfo.distanceFromUser!.toStringAsFixed(1)} km'
+                                    : 'Location not available',
                                 style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (companyInfo.isVerified)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 4.0),
-                                  child: Icon(Icons.verified, color: Colors.blue, size: 16),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            (companyInfo.distanceFromUser != null)
-                                ? 'Within ${companyInfo.distanceFromUser!.toStringAsFixed(1)} km of you'
-                                : 'Location not available',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          //THIS BLOCK ONLY FOR DEBUGGING
-                          if (companyInfo.rankScore != null)
-                            Text(
-                              'Rank Score: ${companyInfo.rankScore!.toStringAsFixed(2)}',
-                              style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
-                            ),//ENDBLOCK
-                        ],
+                            ),
+                            if (minPrice != null)
+                              Text(
+                                'From \$${minPrice.toStringAsFixed(0)}',
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.favorite_border),
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(height: 6),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          minimumSize: const Size(0, 0),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () async {
+                          try {
+                            final docSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+                            if (!docSnap.exists) {
+                              Get.snackbar('Error', 'Provider not found');
+                              return;
+                            }
+                            final userModel = UserModel.fromFirestore(docSnap);
+                            final ChatController chatController = Get.put(ChatController());
+                            await chatController.initializeChat(FirebaseAuth.instance.currentUser!.uid, userModel.uid);
+                            
+                            // Try to send message, but don't fail if notification fails
+                            try {
+                              await chatController.sendMessage(
+                                'Hi, I\'m interested in your services. Can you share more details?',
+                                userModel.uid,
+                                context,
+                                userController.userModel.value?.userName ?? '',
+                                userModel.deviceToken ?? '',
+                                null,
+                              );
+                            } catch (e) {
+                              print('Notification failed: $e');
+                              // Continue to chat even if notification fails
+                            }
+                            
+                            Get.to(() => ChatScreen(userModel: userModel), transition: Transition.cupertino);
+                          } catch (e) {
+                            print('Error opening chat: $e');
+                            Get.snackbar('Error', 'Failed to open chat. Please try again.');
+                          }
+                        },
+                        child: const Text('Request Quote', style: TextStyle(fontSize: 12)),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            if (companyInfo.gigDescription != null &&
-                companyInfo.gigDescription!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  companyInfo.gigDescription!,
-                      style: const TextStyle(fontSize: 12.5, color: Colors.black87),
-                      maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
               ),
-            const SizedBox(height: 4),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size.fromHeight(36),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () {
-                      Get.to(() => CompanyProfileCard(
-                            userId: userId,
-                            companyInfo: companyInfo,
-                            reviews: reviews,
-                            questionAnswerForm: questionAnswerForm,
-                          ),
-                          transition: Transition.cupertino);
-                    },
-                    child: const Text('View Profile', style: TextStyle(fontSize: 14, color: Colors.white)),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size.fromHeight(36),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () async {
-                      // Fetch the full user document for the service provider
-                      final docSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-                      if (!docSnap.exists) return;
-                      final userModel = UserModel.fromFirestore(docSnap);
-                      final ChatController chatController = Get.put(ChatController());
-                      await chatController.initializeChat(FirebaseAuth.instance.currentUser!.uid, userModel.uid);
-                      // Send the auto message
-                      await chatController.sendMessage(
-                        'Hi, can you share details?',
-                        userModel.uid,
-                        context,
-                        userController.userModel.value?.userName ?? '',
-                        userModel.deviceToken ?? '',
-                        null,
-                      );
-                      // Navigate to chat screen
-                      Get.to(() => ChatScreen(userModel: userModel), transition: Transition.cupertino);
-                    },
-                    child: const Text('Request Quote', style: TextStyle(fontSize: 14, color: Colors.white)),
-                  ),
-                ),
-              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -313,26 +492,31 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Obx(() => userController.isLoading.value ||
-                userController.userModel.value == null
-            ? const SizedBox()
-            : Text(
-                'Hi, ${userController.userModel.value?.userName ?? ''}',
-                style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18),
-              )),
         elevation: 0,
-        leadingWidth: 80,
-        leading: GestureDetector(
-          child: const CircleAvatar(
-            child: Icon(
-              CupertinoIcons.person,
-              size: 33,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            const SizedBox(width: 8),
+            const CircleAvatar(child: Icon(CupertinoIcons.person)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Obx(() => userController.isLoading.value || userController.userModel.value == null
+                  ? const SizedBox()
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Hi, ${userController.userModel.value?.userName ?? ''}',
+                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(height: 2),
+                        const Text('Get the most out of Pests247', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                      ],
+                    )),
             ),
-          ),
+            IconButton(onPressed: () { Get.to(() => const SearchProvidersScreen(), transition: Transition.cupertino); }, icon: const Icon(CupertinoIcons.search)),
+            const SizedBox(width: 8),
+          ],
         ),
+        automaticallyImplyLeading: false,
       ),
       body: Obx(() {
         if (userController.isLoading.value) {
@@ -342,27 +526,11 @@ class _HomePageState extends State<HomePage> {
         return SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 30),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onPressed: () {
-                      Get.to(() => LeadFormScreen(), transition: Transition.cupertino);
-                    },
-                    icon: const Icon(Icons.add_circle_outline),
-                    label: const Text('Post a Job'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
+              _buildHeroBanner(context),
+              const SizedBox(height: 8),
+              _buildFilterChips(),
+              const SizedBox(height: 8),
               if (homeController.highestRatedUser != null)
                 const SectionHeader(
                   title: 'Top Rated Provider',
@@ -377,7 +545,7 @@ class _HomePageState extends State<HomePage> {
                 },
               ),
               const SectionHeader(
-                title: 'Categories',
+                title: 'Pest Services',
                 subtitle: 'Select a service to get tailored quotes',
               ),
               homeController.services.isEmpty
@@ -385,32 +553,51 @@ class _HomePageState extends State<HomePage> {
                   : Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 10),
-                      height: MediaQuery.of(context).size.height * .17,
-                      child: GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 1.0,
-                          crossAxisSpacing: 10.0,
-                          mainAxisSpacing: 10.0,
-                        ),
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: homeController.services.length,
+                      height: 130,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
                         itemBuilder: (context, index) {
-                          if (index >= homeController.services.length) {
-                            return const SizedBox();
-                          }
-                          return imagesContainer(
+                          if (index >= homeController.services.length) return const SizedBox();
+                          return SizedBox(
+                            width: 220,
+                            child: Card(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () => imagesContainer(
                             homeController.services[index].imageURL,
                             homeController.services[index].name,
                             index,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
+                                      const Icon(CupertinoIcons.photo_on_rectangle, size: 28),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          homeController.services[index].name,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                           );
                         },
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemCount: homeController.services.length,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                       ),
                     ),
               const SizedBox(height: 20),
               const SectionHeader(
-                title: 'Service Providers',
+                title: 'Pest Service Providers',
                 subtitle: 'Ranked by reviews, proximity, and package',
               ),
               const SizedBox(height: 10),
@@ -444,19 +631,13 @@ class _HomePageState extends State<HomePage> {
                     }
                     final rankedList = futureSnapshot.data ?? [];
 
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: MediaQuery.of(context).size.height < 700 ? 0.58 : 0.64,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: rankedList.length,
+                      itemCount: _filterProviders(rankedList).length,
                       itemBuilder: (context, index) {
-                        final entry = rankedList[index];
+                        final entry = _filterProviders(rankedList)[index];
                         final doc = entry['doc'] as QueryDocumentSnapshot;
                         final companyInfo = entry['companyInfo'] as CompanyInfo;
 
@@ -471,21 +652,8 @@ class _HomePageState extends State<HomePage> {
 
                         return AnimateIn(
                           beginOffset: const Offset(0, 0.12),
-                          beginScale: 0.96,
-                          child: GestureDetector(
-                            onTap: () {
-                              Get.to(
-                                () => CompanyProfileCard(
-                                  userId: userId,
-                                  companyInfo: companyInfo,
-                                  reviews: reviews,
-                                  questionAnswerForm: questionAnswerForm,
-                                ),
-                                transition: Transition.cupertino,
-                              );
-                            },
-                            child: _buildCompanyCard(companyInfo, reviews, questionAnswerForm, userId),
-                          ),
+                          beginScale: 0.98,
+                          child: _buildCompanyListTile(companyInfo, reviews, questionAnswerForm, userId),
                         );
                       },
                     );
@@ -498,5 +666,34 @@ class _HomePageState extends State<HomePage> {
         );
       }),
     );
+  }
+
+  List<Map<String, dynamic>> _filterProviders(List<Map<String, dynamic>> providers) {
+    return providers.where((entry) {
+      final companyInfo = entry['companyInfo'] as CompanyInfo;
+      final doc = entry['doc'] as QueryDocumentSnapshot;
+      final data = doc.data() as Map<String, dynamic>;
+      final reviews = (data['reviews'] as List?)
+          ?.map((e) => Reviews.fromMap(e as Map<String, dynamic>))
+          .toList();
+      
+      // Verified filter
+      if (showVerifiedOnly && !companyInfo.isVerified) return false;
+      
+      // Rating filter
+      if (minRating > 0) {
+        final rating = (reviews != null && reviews.isNotEmpty)
+            ? (reviews.map((e) => e.reviewUserRating).reduce((a, b) => a + b) / reviews.length)
+            : 0.0;
+        if (rating < minRating) return false;
+      }
+      
+      // Distance filter
+      if (nearMeOnly && (companyInfo.distanceFromUser == null || companyInfo.distanceFromUser! > 50)) {
+        return false;
+      }
+      
+      return true;
+    }).toList();
   }
 }
