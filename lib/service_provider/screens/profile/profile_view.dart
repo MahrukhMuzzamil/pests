@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
@@ -17,6 +18,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' as material;
 import 'package:pests247/services/stripe_service.dart';
 import 'package:pests247/service_provider/screens/credits/credits_screen.dart';
+import 'package:pests247/service_provider/controllers/credits/credit_details_controller.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -25,6 +27,13 @@ class ProfileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final homeController = Get.put(HomeController());
     UserController userController = Get.find();
+
+    final CreditDetailsController creditController = Get.put(
+      CreditDetailsController(
+        credits: '100', // placeholder, can be dynamic per package
+        price: 0.99,    // placeholder, dynamic per package
+      ),
+    );
 
     return Scaffold(
       backgroundColor: Colors.blue.withOpacity(1),
@@ -311,14 +320,23 @@ class ProfileView extends StatelessWidget {
                                           );
                                           return;
                                         }
-                                        try {
-                                          await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
-                                        } catch (e) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Payment failed or cancelled: $e')),
-                                          );
+
+                                        if (Platform.isIOS) {
+                                          // Set dynamic values per package
+                                          creditController.productId = 'credits_${pkg.credits}';
+                                          creditController.buyProduct(context, null, null);
+                                        } else {
+                                          // Android - Stripe payment
+                                          try {
+                                            await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
+                                          } catch (e) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Payment failed or cancelled: $e')),
+                                            );
+                                          }
                                         }
                                       },
+
                                     ),
                                   );
                                 },
