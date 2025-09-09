@@ -419,7 +419,10 @@ class LeadsController extends GetxController {
       return;
     }
 
-    if (currentCredits < 5) {
+    // Use dynamic credits based on the lead's configured cost
+    final int leadCost = (lead.credits).toInt();
+
+    if (currentCredits < leadCost) {
       CustomSnackbar.showSnackBar(
         "Error",
         "Not enough credits!",
@@ -430,7 +433,7 @@ class LeadsController extends GetxController {
       return;
     }
 
-    currentCredits -= 5;
+    currentCredits -= leadCost;
 
     final Buyer newBuyer = Buyer(
       userId: userController.userModel.value!.uid,
@@ -439,12 +442,29 @@ class LeadsController extends GetxController {
 
     lead.buyers.add(newBuyer);
 
-    await FirebaseFirestore.instance
+    // Atomically update credits and append to credit history
+    final userRef = FirebaseFirestore.instance
         .collection('users')
-        .doc(userController.userModel.value!.uid)
-        .update({
-      'credits': currentCredits,
-      'leads': FieldValue.arrayUnion([lead.leadId]),
+        .doc(userController.userModel.value!.uid);
+
+    await FirebaseFirestore.instance.runTransaction((txn) async {
+      final snap = await txn.get(userRef);
+      if (!snap.exists) return;
+      txn.update(userRef, {
+        'credits': currentCredits,
+        'leads': FieldValue.arrayUnion([lead.leadId]),
+        'creditHistoryList': FieldValue.arrayUnion([
+          {
+            'creditId': DateTime.now().millisecondsSinceEpoch,
+            'date': Timestamp.fromDate(DateTime.now()),
+            'credits': -leadCost,
+            'price': null,
+            'discount': null,
+            'paymentMethod': 'Credits',
+            'description': 'Lead purchase: ${lead.leadId}',
+          }
+        ]),
+      });
     });
 
     // Also update the lead in Firestore
@@ -468,7 +488,7 @@ class LeadsController extends GetxController {
     fetchFilteredLeads();
     CustomSnackbar.showSnackBar(
       "Success",
-      "Lead contacted! 5 credits deducted.",
+      "Lead contacted! $leadCost credits deducted.",
       Icon(Icons.check_circle,
           color: Theme.of(Get.context!).colorScheme.primary),
       Colors.green,

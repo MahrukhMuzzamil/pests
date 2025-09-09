@@ -273,6 +273,10 @@ class _HomePageState extends State<HomePage> {
         final companyMapList = docs.map((doc) {
           final data = doc.data() as Map<String, dynamic>;
           final companyInfo = CompanyInfo.fromMap(data['companyInfo']);
+          
+          // Debug logging
+          print('Company: ${companyInfo.name}, Premium Package: ${companyInfo.premiumPackage}');
+          
           return {
             'doc': doc,
             'companyInfo': companyInfo,
@@ -315,11 +319,59 @@ class _HomePageState extends State<HomePage> {
     }
 
 
+  Future<String?> _getGigImageUrl(String userId) async {
+    try {
+      final gigsSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('gigs')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+      
+      if (gigsSnapshot.docs.isNotEmpty) {
+        final gigData = gigsSnapshot.docs.first.data();
+        return gigData['imageUrl'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching gig image: $e');
+      return null;
+    }
+  }
+
+  Future<List<String>> _getCertificates(String userId) async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        final companyInfo = data['companyInfo'] as Map<String, dynamic>?;
+        if (companyInfo != null) {
+          final certifications = companyInfo['certifications'] as List<dynamic>?;
+          if (certifications != null) {
+            return certifications.map((e) => e as String).toList();
+          }
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching certificates: $e');
+      return [];
+    }
+  }
+
   Widget _buildCompanyListTile(CompanyInfo companyInfo, List<Reviews>? reviews,
       QuestionAnswerForm? questionAnswerForm, String userId) {
     final double rating = (reviews != null && reviews.isNotEmpty)
         ? (reviews.map((e) => e.reviewUserRating).reduce((a, b) => a + b) / reviews.length)
         : 0.0;
+
+    // Debug logging
+    print('Company: ${companyInfo.name}, Premium Package: ${companyInfo.premiumPackage}');
 
     return FutureBuilder<double?>(
       future: ServiceBaseRateController.getMinPriceForCategory(companyInfo.name ?? ''),
@@ -349,13 +401,15 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Builder(
-                      builder: (context) {
-                        final String? gig = companyInfo.gigImage;
+                    child: FutureBuilder<String?>(
+                      future: _getGigImageUrl(userId),
+                      builder: (context, snapshot) {
+                        final String? gigImage = snapshot.data;
                         final String? logo = companyInfo.logo;
-                        if (gig != null && gig.isNotEmpty) {
+                        
+                        if (gigImage != null && gigImage.isNotEmpty) {
                           return Image.network(
-                            gig,
+                            gigImage,
                             width: 96,
                             height: 72,
                             fit: BoxFit.cover,
@@ -392,6 +446,91 @@ class _HomePageState extends State<HomePage> {
                               const Padding(
                                 padding: EdgeInsets.only(left: 6.0),
                                 child: Icon(Icons.verified, color: Colors.blue, size: 16),
+                              ),
+                            FutureBuilder<List<String>>(
+                              future: _getCertificates(userId),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                                  return const Padding(
+                                    padding: EdgeInsets.only(left: 6.0),
+                                    child: Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                            const Spacer(),
+                            if ((companyInfo.premiumPackage) > 0)
+                              Flexible(
+                                child: Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                    color: companyInfo.premiumPackage == 3
+                                        ? const Color(0xFFFFF7E6) // gold-ish bg
+                                        : companyInfo.premiumPackage == 2
+                                            ? const Color(0xFFF1F2F6) // silver-ish bg
+                                            : companyInfo.premiumPackage == 1
+                                                ? const Color(0xFFE8F0FF) // platinum-ish bg
+                                                : const Color(0xFFF5F5F5), // default bg
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: companyInfo.premiumPackage == 3
+                                          ? const Color(0xFFFFC107)
+                                          : companyInfo.premiumPackage == 2
+                                              ? const Color(0xFFB0BEC5)
+                                              : companyInfo.premiumPackage == 1
+                                                  ? const Color(0xFF90CAF9)
+                                                  : const Color(0xFFE0E0E0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        companyInfo.premiumPackage == 3
+                                            ? Icons.emoji_events // crown-like
+                                            : companyInfo.premiumPackage == 2
+                                                ? Icons.military_tech
+                                                : companyInfo.premiumPackage == 1
+                                                    ? Icons.workspace_premium
+                                                    : Icons.star,
+                                        size: 14,
+                                        color: companyInfo.premiumPackage == 3
+                                            ? const Color(0xFFFFA000)
+                                            : companyInfo.premiumPackage == 2
+                                                ? const Color(0xFF90A4AE)
+                                                : companyInfo.premiumPackage == 1
+                                                    ? const Color(0xFF42A5F5)
+                                                    : const Color(0xFF757575),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                child: Text(
+                                          companyInfo.premiumPackage == 3
+                                              ? 'Gold'
+                                              : companyInfo.premiumPackage == 2
+                                                  ? 'Silver'
+                                                  : companyInfo.premiumPackage == 1
+                                                      ? 'Platinum'
+                                                      : 'Premium',
+                                          style: TextStyle(
+                                            color: companyInfo.premiumPackage == 3
+                                                ? const Color(0xFFFF8F00)
+                                                : companyInfo.premiumPackage == 2
+                                                    ? const Color(0xFF78909C)
+                                                    : companyInfo.premiumPackage == 1
+                                                        ? const Color(0xFF1E88E5)
+                                                        : const Color(0xFF424242),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                           ],
                         ),

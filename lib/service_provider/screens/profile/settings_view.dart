@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
-import 'package:pests247/service_provider/screens/profile/components/card_management/card_details_screen.dart';
 import 'package:pests247/service_provider/screens/profile/components/change_password/change_password_screen.dart';
 import 'package:pests247/service_provider/screens/profile/components/company_info/company_info_screen.dart';
-import 'package:pests247/service_provider/screens/profile/components/credits/credits_screen.dart';
+import 'package:pests247/service_provider/screens/credits/credits_screen.dart';
 import 'package:pests247/service_provider/screens/profile/components/delete_account/delete_account_screen.dart';
 import 'package:pests247/service_provider/screens/profile/components/question_answer/question_answer_screen.dart';
 import 'package:pests247/service_provider/screens/profile/components/social_media_link/social_media_links_screen.dart';
@@ -14,6 +13,7 @@ import 'components/communication/email_template_screen.dart';
 import 'components/communication/sms_template_screen.dart';
 import 'components/gigs/manage_gigs_screen.dart';
 import 'components/widgets/setting_tile.dart';
+import 'components/visibility/manage_visibility_screen.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -76,7 +76,7 @@ class _SettingsViewState extends State<SettingsView> {
               title: 'My Credits',
               subtitle: 'Manage and purchase credits for customer contact.',
               onTap: () {
-                Get.to(() => const CreditsHistoryScreen(),
+                Get.to(() => const CreditsScreen(),
                     transition: Transition.cupertino);
               },
             ),
@@ -126,6 +126,14 @@ class _SettingsViewState extends State<SettingsView> {
               onTap: () {
                 Get.to(() => const CompanyInfoScreen(),
                     transition: Transition.cupertino);
+              },
+            ),
+            SettingTile(
+              leadingIcon: const Icon(Icons.workspace_premium),
+              title: 'Manage Visibility',
+              subtitle: 'Activate Platinum, Gold, or Silver',
+              onTap: () {
+                Get.to(() => const ManageVisibilityScreen(), transition: Transition.cupertino);
               },
             ),
             SettingTile(

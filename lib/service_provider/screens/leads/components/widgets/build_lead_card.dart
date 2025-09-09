@@ -19,43 +19,35 @@ class LeadCard extends StatelessWidget {
     final theme = Theme.of(context);
     final relativeTime = _getRelativeTime(lead.submittedAt);
 
-    return Card(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
-      elevation: 6,
-      child: ClipPath(
-        clipper: ShapeBorderClipper(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(
-                color: theme.colorScheme.primary,
-                width: 8,
-              ),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                buildHeader(theme, lead.name, relativeTime,status,isShown),
-                const SizedBox(height: 16),
-                buildInfoSection(theme, lead, isShown),
-                const SizedBox(height: 16),
-                if (!isShown) buildQuestionnaireSection(theme, lead,isShown),
-                if (!isShown) const SizedBox(height: 16),
-                if (!isShown) buildContactNowButton(context, lead, isShown, isLoggedIn),
-              ],
-            ),
-          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            buildHeader(theme, lead.name, relativeTime, status, isShown),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            buildInfoSection(theme, lead, isShown),
+            const SizedBox(height: 12),
+            if (!isShown) buildQuestionnaireSection(theme, lead, isShown),
+            if (!isShown) const SizedBox(height: 12),
+            if (!isShown) buildContactNowButton(context, lead, isShown, isLoggedIn),
+          ],
         ),
       ),
     );

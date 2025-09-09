@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../../client/widgets/animations/custom_switch.dart';
+import 'package:get/get.dart';
+import 'package:pests247/service_provider/screens/profile/components/visibility/manage_visibility_screen.dart';
 
 class SettingTile extends StatefulWidget {
   final String title;

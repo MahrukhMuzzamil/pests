@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pests247/shared/controllers/app/app_controller.dart';
@@ -33,7 +32,32 @@ class UserController extends GetxController {
               .doc(userId)
               .get();
           if (doc.exists) {
-            UserModel user = UserModel.fromFirestore(doc);
+            // Enforce visibility expiry
+            final data = doc.data() as Map<String, dynamic>;
+            final dynamic expiryRaw = data['visibilityPackageExpiry'];
+            DateTime? expiry;
+            if (expiryRaw is Timestamp) {
+              expiry = expiryRaw.toDate();
+            } else if (expiryRaw is String) {
+              try { expiry = DateTime.parse(expiryRaw); } catch (_) {}
+            }
+
+            if (expiry != null && DateTime.now().isAfter(expiry)) {
+              final Map<String, dynamic> newCompanyInfo = Map<String, dynamic>.from(data['companyInfo'] ?? {});
+              newCompanyInfo['premiumPackage'] = 0;
+              await FirebaseFirestore.instance.collection('users').doc(userId).update({
+                'companyInfo': newCompanyInfo,
+                'visibilityPackage': null,
+                'visibilityPackageName': null,
+                'visibilityPackageExpiry': null,
+              });
+              data['companyInfo'] = newCompanyInfo;
+              data['visibilityPackage'] = null;
+              data['visibilityPackageName'] = null;
+              data['visibilityPackageExpiry'] = null;
+            }
+
+            UserModel user = UserModel.fromJson(data);
             setUser(user);
           }
         }

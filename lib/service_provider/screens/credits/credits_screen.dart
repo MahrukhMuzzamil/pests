@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import '../../../client/widgets/custom_button.dart';
 import '../../controllers/credits/credits_controller.dart';
 import 'components/credit_details_screen.dart';
+import 'credit_history_screen.dart';
 
 class CreditsScreen extends StatelessWidget {
   const CreditsScreen({super.key});
@@ -15,7 +16,17 @@ class CreditsScreen extends StatelessWidget {
     final CreditsController controller = Get.put(CreditsController());
 
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: 'History',
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Get.to(() => const CreditHistoryScreen());
+            },
+          )
+        ],
+      ),
       body: Obx(() {
         if (controller.isLoading.value) {
           return ListView.builder(

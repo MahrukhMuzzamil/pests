@@ -16,6 +16,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' as material;
 import 'package:pests247/services/stripe_service.dart';
+import 'package:pests247/service_provider/screens/credits/credits_screen.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -107,18 +108,164 @@ class ProfileView extends StatelessWidget {
                         ),
                       );
                     }),
-                    // Packages Section
+                    // Visibility Packages Section
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Available Packages',
+                            'Visibility Packages',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Activate Platinum, Gold, or Silver to boost your ranking.',
+                            style: TextStyle(color: Colors.black54, fontSize: 12),
+                          ),
+                          const SizedBox(height: 8),
+                          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                            stream: FirebaseFirestore.instance
+                                .collection('visibilityPackages')
+                                .orderBy('tier', descending: true)
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              }
+                              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('No visibility packages available.'),
+                                    const SizedBox(height: 8),
+                                    OutlinedButton(
+                                      onPressed: () {
+                                        Get.to(
+                                          () => const SettingsView(),
+                                          transition: Transition.cupertino,
+                                        );
+                                      },
+                                      child: const Text('Open Manage Visibility'),
+                                    ),
+                                  ],
+                                );
+                              }
+                              final docs = snapshot.data!.docs;
+                              return ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: docs.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                                itemBuilder: (context, index) {
+                                  final pkg = docs[index].data();
+                                  final String name = pkg['name']?.toString() ?? '';
+                                  final int tier = (pkg['tier'] as num?)?.toInt() ?? 0;
+                                  final int duration = (pkg['durationDays'] as num?)?.toInt() ?? 30;
+                                  final double price = (pkg['price'] as num?)?.toDouble() ?? 0.0;
+                                  final String description = pkg['description']?.toString() ?? '';
+
+                                  // Pick icon/color by name first (gold/silver/platinum), fallback to tier
+                                  final lname = name.toLowerCase();
+                                  IconData icon;
+                                  Color color;
+                                  if (lname.contains('gold')) {
+                                    icon = Icons.emoji_events; // trophy
+                                    color = const Color(0xFFFFD700); // Gold color
+                                  } else if (lname.contains('silver')) {
+                                    icon = Icons.military_tech; // medal
+                                    color = const Color(0xFFC0C0C0); // Silver color
+                                  } else if (lname.contains('platinum')) {
+                                    icon = Icons.workspace_premium; // premium/crown-like
+                                    color = const Color(0xFF1E88E5); // Blue color
+                                  } else {
+                                    switch (tier) {
+                                      case 3:
+                                        icon = Icons.emoji_events;
+                                        color = const Color(0xFFFFA000);
+                                        break;
+                                      case 2:
+                                        icon = Icons.military_tech;
+                                        color = const Color(0xFF90A4AE);
+                                        break;
+                                      default:
+                                        icon = Icons.workspace_premium;
+                                        color = const Color(0xFF1E88E5);
+                                    }
+                                  }
+
+                                  return material.Card(
+                                    child: ListTile(
+                                      leading: CircleAvatar(backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color)),
+                                      title: Text('$name (Tier $tier)'),
+                                      subtitle: Text('Duration: $duration days • Price: ${price.toStringAsFixed(2)}\n$description'),
+                                      isThreeLine: description.isNotEmpty,
+                                      trailing: ElevatedButton(
+                                        onPressed: () async {
+                                          final uid = FirebaseAuth.instance.currentUser?.uid;
+                                          if (uid == null) return;
+                                          final DateTime expiry = DateTime.now().add(Duration(days: duration));
+                                          final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+                                          await FirebaseFirestore.instance.runTransaction((txn) async {
+                                            final snap = await txn.get(userRef);
+                                            if (!snap.exists) return;
+                                            final data = snap.data() as Map<String, dynamic>;
+                                            final Map<String, dynamic> newCompanyInfo = Map<String, dynamic>.from(data['companyInfo'] ?? {});
+                                            newCompanyInfo['premiumPackage'] = tier;
+                                            txn.update(userRef, {
+                                              'companyInfo': newCompanyInfo,
+                                              'visibilityPackage': docs[index].id,
+                                              'visibilityPackageName': name,
+                                              'visibilityPackageExpiry': Timestamp.fromDate(expiry),
+                                            });
+                                          });
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Activated $name (expires ${expiry.toLocal().toString().split(' ')[0]})')),
+                                            );
+                                          }
+                                        },
+                                        child: const Text('Activate'),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Packages Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Available Credit Bundles',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Get.to(() => const CreditsScreen());
+                                },
+                                child: const Text(
+                                  'Manage Credits',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -157,34 +304,20 @@ class ProfileView extends StatelessWidget {
                                       subtitle: Text(pkg.description.isNotEmpty ? pkg.description : 'No description'),
                                       trailing: Text('\$${pkg.price.toStringAsFixed(2)}'),
                                       onTap: () async {
-                                      final user = FirebaseAuth.instance.currentUser;
-                                      if (user == null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Please log in to purchase a package.')),
-                                        );
-                                        return;
-                                      }
-                                      try {
-                                        // Use the existing StripeService for payment
-                                        final paymentSuccess = await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
-                                        if (paymentSuccess) {
-                                          // After successful payment, update the user's visibility package info
-                                          await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                                            'visibilityPackage': pkg.id,
-                                            'visibilityPackageName': '${pkg.credits} Credits',
-                                            'visibilityPackagePrice': pkg.price,
-                                            'visibilityPackagePurchasedAt': FieldValue.serverTimestamp(),
-                                            'visibilityPackageExpiry': Timestamp.fromDate(DateTime.now().add(const Duration(days: 30))),
-                                          });
+                                        final user = FirebaseAuth.instance.currentUser;
+                                        if (user == null) {
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Visibility package purchased successfully!')),
+                                            const SnackBar(content: Text('Please log in to purchase credits.')),
+                                          );
+                                          return;
+                                        }
+                                        try {
+                                          await StripeService.instance.makePayment(context, pkg.credits, pkg.price);
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Payment failed or cancelled: $e')),
                                           );
                                         }
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Payment failed or cancelled: $e')),
-                                        );
-                                      }
                                       },
                                     ),
                                   );

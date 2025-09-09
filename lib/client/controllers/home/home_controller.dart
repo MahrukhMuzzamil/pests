@@ -207,16 +207,16 @@ class HomeController extends GetxController {
       scoredCompanies.add(company);
     }
 
-    // Group by package
-    List<CompanyInfo> package1 = scoredCompanies.where((c) => c.premiumPackage == 1).toList();
-    List<CompanyInfo> package2 = scoredCompanies.where((c) => c.premiumPackage == 2).toList();
+    // Group by package (3=Gold highest, then 2=Silver, 1=Platinum, 0=None)
     List<CompanyInfo> package3 = scoredCompanies.where((c) => c.premiumPackage == 3).toList();
+    List<CompanyInfo> package2 = scoredCompanies.where((c) => c.premiumPackage == 2).toList();
+    List<CompanyInfo> package1 = scoredCompanies.where((c) => c.premiumPackage == 1).toList();
     List<CompanyInfo> package0 = scoredCompanies.where((c) => c.premiumPackage == 0).toList();
 
     // Sort each by descending rankScore
-    package1.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
-    package2.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
     package3.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package2.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
+    package1.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
     package0.sort((a, b) => (b.rankScore ?? 0).compareTo(a.rankScore ?? 0));
 
     // Respect max slot per package tier

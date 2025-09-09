@@ -91,6 +91,51 @@ class StripeService extends GetxController {
     }
   }
 
+  // One-off payment that does NOT change user credits. Use for visibility packages or other purchases.
+  Future<bool> payForVisibilityPackage({
+    required BuildContext context,
+    required double price,
+    String? description,
+  }) async {
+    if (isLoading.value) return false;
+    isLoading.value = true;
+    try {
+      String? paymentIntentSecret = await _createPaymentIntent(price, 'cad');
+      if (paymentIntentSecret == null) {
+        throw Exception('Failed to create payment intent');
+      }
+
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: paymentIntentSecret,
+          merchantDisplayName: 'Pests 247',
+        ),
+      );
+
+      await Stripe.instance.presentPaymentSheet();
+
+      CustomSnackbar.showSnackBar(
+        'Success',
+        description ?? 'Payment successful.',
+        const Icon(Ionicons.card),
+        Theme.of(context).colorScheme.primary,
+        context,
+      );
+      return true;
+    } catch (e) {
+      CustomSnackbar.showSnackBar(
+        'Payment Failed',
+        'An error occurred during payment. Please try again.',
+        const Icon(Icons.error),
+        Theme.of(context).colorScheme.error,
+        context,
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> updateFirebaseCredits({
     required String userId,
     required int credits,
