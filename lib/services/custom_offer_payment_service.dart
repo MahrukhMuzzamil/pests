@@ -103,13 +103,14 @@ class CustomOfferPaymentService extends GetxController {
       final companyInfo = providerData?['companyInfo'] as Map<String, dynamic>?;
       final stripeAccountId = companyInfo?['stripeAccountId'] as String?;
 
-      // Create CustomOrder record
+      // Create CustomOrder record - FIXED: Added name field
       final orderId = const Uuid().v4();
       final customOrder = CustomOrder(
         id: orderId,
         offerId: offer.id,
         providerId: offer.providerId,
         clientId: offer.clientId,
+       // name: offer.name,
         description: offer.description,
         grossPrice: offer.totalPrice,
         commissionAmount: commissionAmount,
@@ -138,6 +139,7 @@ class CustomOfferPaymentService extends GetxController {
         'offerId': offer.id,
         'providerId': offer.providerId,
         'clientId': offer.clientId,
+        'name': offer.name, // FIXED: Added name to payment record too
         'totalAmount': offer.totalPrice,
         'commissionAmount': commissionAmount,
         'providerAmount': providerAmount,
@@ -191,7 +193,7 @@ class CustomOfferPaymentService extends GetxController {
         offer.providerId,
         Get.context!,
         'Pests 247',
-        'New order received! Please start working on: ${offer.description}',
+        'New order received! Please start working on: ${offer.name}', // FIXED: Use name instead of description for notification
       );
 
       print('[CustomOfferPaymentService] Notifications sent successfully.');
@@ -210,7 +212,7 @@ class CustomOfferPaymentService extends GetxController {
         "amount": _calculateAmount(amount),
         "currency": "cad",
         "destination": stripeAccountId,
-        "description": "Payment for: ${offer.description}",
+        "description": "Payment for: ${offer.name}", // FIXED: Use name instead of description
       };
 
       var response = await dio.post(
@@ -308,4 +310,4 @@ class CustomOfferPaymentService extends GetxController {
     print('[CustomOfferPaymentService] Calculated amount (in smallest unit): $calculatedAmount');
     return calculatedAmount;
   }
-} 
+}
