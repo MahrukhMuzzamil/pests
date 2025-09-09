@@ -31,7 +31,6 @@ class ChatScreen extends StatelessWidget {
   final ChatController chatController = Get.put(ChatController());
   final ScrollController _scrollController = ScrollController();
   final UserController userController = Get.find();
-  final RxBool showNotifications = true.obs; // Add toggle for notifications
 
   @override
   Widget build(BuildContext context) {
@@ -57,156 +56,8 @@ class ChatScreen extends StatelessWidget {
           } else {
             return Column(
               children: [
-                // Scrollable notifications container
-                Obx(() => showNotifications.value ? Container(
-                  height: 200, // Fixed height for notifications
-                  child: Column(
-                    children: [
-                      // Notifications header
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.notifications, size: 16, color: Colors.grey),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Notifications',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Scroll',
-                                style: TextStyle(fontSize: 10, color: Colors.grey),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => showNotifications.value = false,
-                              child: const Icon(Icons.keyboard_arrow_up, size: 16, color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Notifications content
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              // Custom Offer StreamBuilder
-                              StreamBuilder<QuerySnapshot>(
-                                stream: FirebaseFirestore.instance
-                                  .collection('chat_room')
-                                  .doc(chatController.chatRoomId)
-                                  .collection('custom_offers')
-                                  .orderBy('createdAt', descending: false)
-                                  .snapshots(),
-                                builder: (context, snapshot) {
-                                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
-                                  
-                                  // Filter out cleared offers for current user
-                                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                                  final offers = snapshot.data!.docs
-                                      .where((doc) {
-                                        final data = doc.data() as Map<String, dynamic>;
-                                        final clearedFor = data['clearedFor'] as List<dynamic>?;
-                                        return clearedFor == null || !clearedFor.contains(currentUserId);
-                                      })
-                                      .map((doc) => CustomOffer.fromMap(doc.data() as Map<String, dynamic>))
-                                      .toList();
-                                  
-                                  if (offers.isEmpty) return SizedBox();
-                                  
-                                  return Column(
-                                    children: offers.map((offer) => CustomOfferWidget(
-                                      offer: offer,
-                                      isClient: userController.accountType == 'client',
-                                      chatRoomId: chatController.chatRoomId,
-                                    )).toList(),
-                                  );
-                                },
-                              ),
-                              // Delivery Completion StreamBuilder
-                              StreamBuilder<QuerySnapshot>(
-                                stream: FirebaseFirestore.instance
-                                  .collection('chat_room')
-                                  .doc(chatController.chatRoomId)
-                                  .collection('delivery_completions')
-                                  .orderBy('createdAt', descending: false)
-                                  .snapshots(),
-                                builder: (context, snapshot) {
-                                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return SizedBox();
-                                  
-                                  // Filter out cleared deliveries for current user
-                                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                                  final deliveries = snapshot.data!.docs
-                                      .where((doc) {
-                                        final data = doc.data() as Map<String, dynamic>;
-                                        final clearedFor = data['clearedFor'] as List<dynamic>?;
-                                        return clearedFor == null || !clearedFor.contains(currentUserId);
-                                      })
-                                      .toList();
-                                  
-                                  if (deliveries.isEmpty) return SizedBox();
-                                  
-                                  return Column(
-                                    children: deliveries.map((doc) {
-                                      final data = doc.data() as Map<String, dynamic>;
-                                      return DeliveryCompletionWidget(
-                                        messageId: doc.id,
-                                        chatRoomId: chatController.chatRoomId,
-                                        isClient: userController.accountType == 'client',
-                                        providerId: data['providerId'] ?? '',
-                                        clientId: data['clientId'] ?? '',
-                                      );
-                                    }).toList(),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ) : Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.notifications, size: 16, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'Notifications hidden',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => showNotifications.value = true,
-                        child: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )),
-                // Divider to separate notifications from messages
-                Container(
-                  height: 1,
-                  color: Colors.grey.withOpacity(0.3),
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
                 Expanded(
-                  child: buildMessageList(userModel.uid,
+                  child: buildCombinedMessageList(userModel.uid,
                       FirebaseAuth.instance.currentUser?.uid ?? "No user id"),
                 ),
                 Obx(() {
@@ -333,73 +184,323 @@ class ChatScreen extends StatelessWidget {
     );
   }
 
-  Widget buildMessageList(String receiver, String user) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: chatController.getMessage(chatController.chatRoomId),
-      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+  // New combined stream that merges messages, offers, and deliveries
+  /*Widget buildCombinedMessageList(String receiver, String userId) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    
+    return StreamBuilder<List<QuerySnapshot>>(
+      stream: Stream.combineLatest3(
+        // Messages stream
+        FirebaseFirestore.instance
+            .collection('chat_room')
+            .doc(chatController.chatRoomId)
+            .collection('message')
+            .orderBy('timeStamp')
+            .snapshots(),
+        // Custom offers stream
+        FirebaseFirestore.instance
+            .collection('chat_room')
+            .doc(chatController.chatRoomId)
+            .collection('custom_offers')
+            .orderBy('createdAt')
+            .snapshots(),
+        // Delivery completions stream
+        FirebaseFirestore.instance
+            .collection('chat_room')
+            .doc(chatController.chatRoomId)
+            .collection('delivery_completions')
+            .orderBy('createdAt')
+            .snapshots(),
+        (messages, offers, deliveries) => [messages, offers, deliveries],
+      ),
+      builder: (context, AsyncSnapshot<List<QuerySnapshot>> snapshot) {
         if (snapshot.hasError) {
-          return const Center(child: Text('Error fetching messages'));
+          return const Center(child: Text('Error fetching data'));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return buildShimmerLoading(context);
         }
-        if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Text('No messages'),
-          );
+        if (snapshot.data == null) {
+          return const Center(child: Text('No data'));
         }
 
-        // Filter out cleared messages for current user
-        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-        final filteredDocs = snapshot.data!.docs.where((doc) {
+        final List<QuerySnapshot> snapshots = snapshot.data!;
+        final messagesSnapshot = snapshots[0];
+        final offersSnapshot = snapshots[1];
+        final deliveriesSnapshot = snapshots[2];
+
+        // Combine and sort all items by timestamp
+        List<Map<String, dynamic>> combinedItems = [];
+
+        // Add messages
+        for (var doc in messagesSnapshot.docs) {
           final data = doc.data() as Map<String, dynamic>;
           final clearedFor = data['clearedFor'] as List<dynamic>?;
-          return clearedFor == null || !clearedFor.contains(currentUserId);
-        }).toList();
-
-        if (filteredDocs.isEmpty) {
-          return const Center(
-            child: Text('No messages'),
-          );
+          if (clearedFor == null || !clearedFor.contains(currentUserId)) {
+            combinedItems.add({
+              'type': 'message',
+              'data': data,
+              'docId': doc.id,
+              'timestamp': data['timeStamp'] as Timestamp? ?? Timestamp.now(),
+            });
+          }
         }
 
+        // Add offers
+        for (var doc in offersSnapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final clearedFor = data['clearedFor'] as List<dynamic>?;
+          if (clearedFor == null || !clearedFor.contains(currentUserId)) {
+            final offer = CustomOffer.fromMap(data);
+            combinedItems.add({
+              'type': 'offer',
+              'offer': offer,
+              'docId': doc.id,
+              'timestamp': Timestamp.fromDate(offer.createdAt),
+            });
+          }
+        }
+
+        // Add delivery completions
+        for (var doc in deliveriesSnapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final clearedFor = data['clearedFor'] as List<dynamic>?;
+          if (clearedFor == null || !clearedFor.contains(currentUserId)) {
+            combinedItems.add({
+              'type': 'delivery',
+              'data': data,
+              'docId': doc.id,
+              'timestamp': data['createdAt'] as Timestamp? ?? Timestamp.now(),
+            });
+          }
+        }
+
+        // Sort by timestamp
+        combinedItems.sort((a, b) => 
+            (a['timestamp'] as Timestamp).compareTo(b['timestamp'] as Timestamp));
+
+        if (combinedItems.isEmpty) {
+          return const Center(child: Text('No messages'));
+        }
+
+        // Auto-scroll to bottom
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
-            _scrollController
-                .jumpTo(_scrollController.position.maxScrollExtent);
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
           }
         });
 
-        return ListView(
+        return ListView.builder(
           controller: _scrollController,
-          children: filteredDocs
-              .map((document) => buildMessageItem(document, user, context))
-              .toList(),
+          itemCount: combinedItems.length,
+          itemBuilder: (context, index) {
+            final item = combinedItems[index];
+            final type = item['type'] as String;
+            
+            switch (type) {
+              case 'message':
+                return buildMessageItem(
+                  item['data'] as Map<String, dynamic>,
+                  item['docId'] as String,
+                  userId,
+                  context,
+                );
+              case 'offer':
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: CustomOfferWidget(
+                    offer: item['offer'] as CustomOffer,
+                    isClient: userController.accountType == 'client',
+                    chatRoomId: chatController.chatRoomId,
+                  ),
+                );
+              case 'delivery':
+                final deliveryData = item['data'] as Map<String, dynamic>;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: DeliveryCompletionWidget(
+                    messageId: item['docId'] as String,
+                    chatRoomId: chatController.chatRoomId,
+                    isClient: userController.accountType == 'client',
+                    providerId: deliveryData['providerId'] ?? '',
+                    clientId: deliveryData['clientId'] ?? '',
+                  ),
+                );
+              default:
+                return Container();
+            }
+          },
+        );
+      },
+    );
+  }*/
+
+    Widget buildCombinedMessageList(String receiver, String userId) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('chat_room')
+          .doc(chatController.chatRoomId)
+          .collection('message')
+          .orderBy('timeStamp')
+          .snapshots(),
+      builder: (context, messagesSnapshot) {
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('chat_room')
+              .doc(chatController.chatRoomId)
+              .collection('custom_offers')
+              .orderBy('createdAt')
+              .snapshots(),
+          builder: (context, offersSnapshot) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chat_room')
+                  .doc(chatController.chatRoomId)
+                  .collection('delivery_completions')
+                  .orderBy('createdAt')
+                  .snapshots(),
+              builder: (context, deliveriesSnapshot) {
+                if (messagesSnapshot.hasError || offersSnapshot.hasError || deliveriesSnapshot.hasError) {
+                  return const Center(child: Text('Error fetching data'));
+                }
+                
+                if (messagesSnapshot.connectionState == ConnectionState.waiting ||
+                    offersSnapshot.connectionState == ConnectionState.waiting ||
+                    deliveriesSnapshot.connectionState == ConnectionState.waiting) {
+                  return buildShimmerLoading(context);
+                }
+
+                // Combine and sort all items by timestamp
+                List<Map<String, dynamic>> combinedItems = [];
+
+                // Add messages
+                if (messagesSnapshot.hasData) {
+                  for (var doc in messagesSnapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final clearedFor = data['clearedFor'] as List<dynamic>?;
+                    if (clearedFor == null || !clearedFor.contains(currentUserId)) {
+                      combinedItems.add({
+                        'type': 'message',
+                        'data': data,
+                        'docId': doc.id,
+                        'timestamp': data['timeStamp'] as Timestamp? ?? Timestamp.now(),
+                      });
+                    }
+                  }
+                }
+
+                // Add offers
+                if (offersSnapshot.hasData) {
+                  for (var doc in offersSnapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final clearedFor = data['clearedFor'] as List<dynamic>?;
+                    if (clearedFor == null || !clearedFor.contains(currentUserId)) {
+                      final offer = CustomOffer.fromMap(data);
+                      combinedItems.add({
+                        'type': 'offer',
+                        'offer': offer,
+                        'docId': doc.id,
+                        'timestamp': Timestamp.fromDate(offer.createdAt),
+                      });
+                    }
+                  }
+                }
+
+                // Add delivery completions
+                if (deliveriesSnapshot.hasData) {
+                  for (var doc in deliveriesSnapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final clearedFor = data['clearedFor'] as List<dynamic>?;
+                    if (clearedFor == null || !clearedFor.contains(currentUserId)) {
+                      combinedItems.add({
+                        'type': 'delivery',
+                        'data': data,
+                        'docId': doc.id,
+                        'timestamp': data['createdAt'] as Timestamp? ?? Timestamp.now(),
+                      });
+                    }
+                  }
+                }
+
+                // Sort by timestamp
+                combinedItems.sort((a, b) => 
+                    (a['timestamp'] as Timestamp).compareTo(b['timestamp'] as Timestamp));
+
+                if (combinedItems.isEmpty) {
+                  return const Center(child: Text('No messages'));
+                }
+
+                // Auto-scroll to bottom
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.hasClients) {
+                    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                  }
+                });
+
+                return ListView.builder(
+                  controller: _scrollController,
+                  itemCount: combinedItems.length,
+                  itemBuilder: (context, index) {
+                    final item = combinedItems[index];
+                    final type = item['type'] as String;
+                    
+                    switch (type) {
+                      case 'message':
+                        return buildMessageItem(
+                          item['data'] as Map<String, dynamic>,
+                          item['docId'] as String,
+                          userId,
+                          context,
+                        );
+                      case 'offer':
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: CustomOfferWidget(
+                            offer: item['offer'] as CustomOffer,
+                            isClient: userController.accountType == 'client',
+                            chatRoomId: chatController.chatRoomId,
+                          ),
+                        );
+                      case 'delivery':
+                        final deliveryData = item['data'] as Map<String, dynamic>;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: DeliveryCompletionWidget(
+                            messageId: item['docId'] as String,
+                            chatRoomId: chatController.chatRoomId,
+                            isClient: userController.accountType == 'client',
+                            providerId: deliveryData['providerId'] ?? '',
+                            clientId: deliveryData['clientId'] ?? '',
+                          ),
+                        );
+                      default:
+                        return Container();
+                    }
+                  },
+                );
+              },
+            );
+          },
         );
       },
     );
   }
 
   Widget buildMessageItem(
-    DocumentSnapshot document,
+    Map<String, dynamic> data,
+    String messageId,
     String userId,
     BuildContext context,
   ) {
-    final Map<String, dynamic>? data = document.data() as Map<String, dynamic>?;
-
-    if (data == null) {
-      return Container();
-    }
-
     final String message = data['message'] ?? '';
     final String senderId = data['senderId'] ?? '';
-    final String messageId = document.id;
     final Timestamp? timestamp = data['timeStamp'] as Timestamp?;
     final String? mediaUrl = data['mediaUrl'];
     final bool isDeliveryCompletion = data['isDeliveryCompletion'] ?? false;
     final String? deliveryCompletionId = data['deliveryCompletionId'];
-    final DateTime time =
-        timestamp != null ? timestamp.toDate() : DateTime.now();
+    final DateTime time = timestamp != null ? timestamp.toDate() : DateTime.now();
     final String formattedTime = DateFormat('hh:mm a').format(time);
     final bool isCurrentUserSender = senderId == userId;
 
@@ -407,15 +508,9 @@ class ChatScreen extends StatelessWidget {
       return Container();
     }
 
-    // If this is a delivery completion message, show the widget
+    // Skip delivery completion messages since they're handled separately
     if (isDeliveryCompletion && deliveryCompletionId != null) {
-      return DeliveryCompletionWidget(
-        messageId: deliveryCompletionId,
-        chatRoomId: chatController.chatRoomId,
-        isClient: userController.accountType == 'client',
-        providerId: senderId,
-        clientId: userId,
-      );
+      return Container();
     }
 
     return GestureDetector(
@@ -423,8 +518,7 @@ class ChatScreen extends StatelessWidget {
         chatController.toggleMessageSelection(messageId, isCurrentUserSender);
       },
       onTap: () {
-        if (chatController.selectedMessageIds.isNotEmpty &&
-            isCurrentUserSender) {
+        if (chatController.selectedMessageIds.isNotEmpty && isCurrentUserSender) {
           chatController.toggleMessageSelection(messageId, isCurrentUserSender);
         }
       },
@@ -825,28 +919,6 @@ class ChatScreen extends StatelessWidget {
         'createdAt': Timestamp.now(),
         'providerId': FirebaseAuth.instance.currentUser!.uid,
         'clientId': userModel.uid,
-      });
-
-      // Send the delivery completed message
-      final String message = 'Delivery completed. Please confirm.';
-      await chatController.sendMessage(
-        message,
-        userModel.uid,
-        context,
-        userController.userModel.value!.userName,
-        userModel.deviceToken ?? '',
-        null,
-      );
-
-      // Add delivery completion widget to the message
-      await FirebaseFirestore.instance
-          .collection('chat_room')
-          .doc(chatController.chatRoomId)
-          .collection('message')
-          .doc(chatController.lastMessageId)
-          .update({
-        'isDeliveryCompletion': true,
-        'deliveryCompletionId': deliveryId,
       });
 
       chatController.messageController.clear();
