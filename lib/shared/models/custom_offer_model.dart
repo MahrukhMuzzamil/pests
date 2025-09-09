@@ -4,9 +4,10 @@ class CustomOffer {
   final String id;
   final String providerId;
   final String clientId;
+  final String name; // NEW: Separate field for offer name/title
   final String description;
   final double totalPrice;
-  final String timeline;
+  final String timeline; // Now stores "X days" format or delivery time description
   final String feeType; // e.g., 'per visit', 'one-time'
   final double commissionPercent;
   final String status; // 'pending', 'accepted', 'declined', 'paid'
@@ -23,6 +24,7 @@ class CustomOffer {
     required this.id,
     required this.providerId,
     required this.clientId,
+    required this.name, // NEW: Required offer name
     required this.description,
     required this.totalPrice,
     required this.timeline,
@@ -43,6 +45,7 @@ class CustomOffer {
     'id': id,
     'providerId': providerId,
     'clientId': clientId,
+    'name': name, // NEW: Include name in map
     'description': description,
     'totalPrice': totalPrice,
     'timeline': timeline,
@@ -63,6 +66,7 @@ class CustomOffer {
     id: map['id'],
     providerId: map['providerId'],
     clientId: map['clientId'],
+    name: map['name'] ?? 'Custom Service', // NEW: With fallback for old data
     description: map['description'],
     totalPrice: (map['totalPrice'] as num).toDouble(),
     timeline: map['timeline'],
@@ -82,5 +86,26 @@ class CustomOffer {
   factory CustomOffer.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return CustomOffer.fromMap(data);
+  }
+
+  // Helper method to get delivery days as integer (if timeline is in "X days" format)
+  int? get deliveryDays {
+    if (timeline.toLowerCase().contains('days')) {
+      final match = RegExp(r'(\d+)').firstMatch(timeline);
+      if (match != null) {
+        return int.tryParse(match.group(1)!);
+      }
+    }
+    return null;
+  }
+
+  // Helper method to get formatted delivery time
+  String get formattedDeliveryTime {
+    final days = deliveryDays;
+    if (days != null) {
+      if (days == 1) return '1 day';
+      return '$days days';
+    }
+    return timeline; // Fallback to original timeline
   }
 }
