@@ -110,6 +110,7 @@ class CustomOfferPaymentService extends GetxController {
         offerId: offer.id,
         providerId: offer.providerId,
         clientId: offer.clientId,
+        name: offer.name,
         description: offer.description,
         grossPrice: offer.totalPrice,
         commissionAmount: commissionAmount,
@@ -138,6 +139,7 @@ class CustomOfferPaymentService extends GetxController {
         'offerId': offer.id,
         'providerId': offer.providerId,
         'clientId': offer.clientId,
+        'name' : offer.name,
         'totalAmount': offer.totalPrice,
         'commissionAmount': commissionAmount,
         'providerAmount': providerAmount,
@@ -191,7 +193,7 @@ class CustomOfferPaymentService extends GetxController {
         offer.providerId,
         Get.context!,
         'Pests 247',
-        'New order received! Please start working on: ${offer.description}',
+        'New order received! Please start working on: ${offer.name}',
       );
 
       print('[CustomOfferPaymentService] Notifications sent successfully.');
@@ -210,7 +212,7 @@ class CustomOfferPaymentService extends GetxController {
         "amount": _calculateAmount(amount),
         "currency": "cad",
         "destination": stripeAccountId,
-        "description": "Payment for: ${offer.description}",
+        "description": "Payment for: ${offer.name}",
       };
 
       var response = await dio.post(

@@ -5,6 +5,7 @@ class CustomOrder {
   final String offerId;
   final String providerId;
   final String clientId;
+  final String name;
   final String description;
   final double grossPrice; // Total amount paid by client
   final double commissionAmount; // Platform commission
@@ -27,6 +28,7 @@ class CustomOrder {
     required this.offerId,
     required this.providerId,
     required this.clientId,
+    required this.name,
     required this.description,
     required this.grossPrice,
     required this.commissionAmount,
@@ -50,6 +52,7 @@ class CustomOrder {
     'offerId': offerId,
     'providerId': providerId,
     'clientId': clientId,
+    'name' : name,
     'description': description,
     'grossPrice': grossPrice,
     'commissionAmount': commissionAmount,
@@ -73,6 +76,7 @@ class CustomOrder {
     offerId: map['offerId'],
     providerId: map['providerId'],
     clientId: map['clientId'],
+    name: map['name'] ?? 'Custom Service', //fallback name
     description: map['description'],
     grossPrice: (map['grossPrice'] as num).toDouble(),
     commissionAmount: (map['commissionAmount'] as num).toDouble(),
