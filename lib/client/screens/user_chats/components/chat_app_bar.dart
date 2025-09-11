@@ -10,14 +10,12 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final UserModel userModel;
   final ChatController chatController;
   final bool isSelected;
-  final VoidCallback? onClearChat;
 
   const ChatAppBar({
     super.key,
     required this.userModel,
     required this.chatController,
     required this.isSelected,
-    this.onClearChat,
   });
 
   @override
@@ -54,27 +52,18 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         Obx(() {
           return chatController.selectedMessageIds.isNotEmpty
               ? IconButton(
-            onPressed: () {
-              print(chatController.selectedMessageIds);
-              showDeleteConfirmation(context, () {
-                chatController.deleteSelectedMessages(
-                  FirebaseAuth.instance.currentUser!.uid,
-                  userModel.uid,
-                );
-              });
-            },
-            icon: const Icon(Icons.delete),
-          )
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: onClearChat,
-                      icon: const Icon(Icons.clear_all),
-                      tooltip: 'Clear Chat',
-                    ),
-                  ],
-                );
+                  onPressed: () {
+                    print(chatController.selectedMessageIds);
+                    showDeleteConfirmation(context, () {
+                      chatController.deleteSelectedMessages(
+                        FirebaseAuth.instance.currentUser!.uid,
+                        userModel.uid,
+                      );
+                    });
+                  },
+                  icon: const Icon(Icons.delete),
+                )
+              : const SizedBox.shrink(); // Empty widget when no messages selected
         }),
       ],
     );
@@ -83,7 +72,6 @@ class ChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
-
 
 Future<void> showDeleteConfirmation(
     BuildContext context, Function onConfirm) async {
@@ -140,4 +128,3 @@ Future<void> showDeleteConfirmation(
     );
   }
 }
-
